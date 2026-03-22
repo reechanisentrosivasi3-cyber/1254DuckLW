@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Last War — Alliance Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Teko:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080c10;--bg2:#0d1318;--bg3:#111920;--panel:#0f1923;--panel2:#152030;
+    --border:#1e3348;--border-glow:#1e4a6e;--accent:#e8a020;--accent2:#f0c050;
+    --accent-dim:#7a5210;--red:#c0392b;--red-glow:#e74c3c;--green:#27ae60;
+    --green-glow:#2ecc71;--blue:#2980b9;--blue-light:#3498db;--text:#c8dae8;
+    --text-dim:#5a7a90;--text-bright:#e8f4ff;--hud-line:rgba(30,70,110,0.4);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(var(--hud-line) 1px,transparent 1px),linear-gradient(90deg,var(--hud-line) 1px,transparent 1px);
+    background-size:40px 40px;opacity:.5;}
+
+  /* LOADING */
+  #loading-overlay{position:fixed;inset:0;z-index:500;background:rgba(8,12,16,.95);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;}
+  #loading-overlay.hidden{display:none;}
+  .loading-spinner{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:3px;}
+
+  /* TOP BAR */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(8,12,16,.95);border-bottom:1px solid var(--border-glow);
+    backdrop-filter:blur(12px);display:flex;align-items:center;box-shadow:0 2px 30px rgba(0,100,200,.15);}
+  .logo-block{display:flex;align-items:center;gap:12px;padding:12px 28px;border-right:1px solid var(--border);
+    background:linear-gradient(90deg,rgba(232,160,32,.08),transparent);}
+  .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--bg);font-weight:700;
+    animation:pulse-icon 3s ease-in-out infinite;}
+  @keyframes pulse-icon{0%,100%{box-shadow:0 0 8px var(--accent)}50%{box-shadow:0 0 20px var(--accent),0 0 40px rgba(232,160,32,.3)}}
+  .logo-text{font-family:'Teko',sans-serif;font-size:22px;letter-spacing:3px;color:var(--text-bright);}
+  .logo-text span{color:var(--accent);}
+  .alliance-name{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-top:-2px;}
+  .nav{display:flex;flex:1;overflow-x:auto;}
+  .nav-btn{display:flex;align-items:center;gap:8px;padding:16px 24px;cursor:pointer;border:none;background:none;
+    color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;
+    text-transform:uppercase;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+  .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.03);}
+  .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(232,160,32,.05);}
+  .status-bar{display:flex;align-items:center;gap:10px;padding:0 20px;border-left:1px solid var(--border);flex-shrink:0;}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green-glow);box-shadow:0 0 8px var(--green-glow);animation:blink 2s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .status-text{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;}
+
+  /* SECTIONS */
+  .section{display:none;padding:28px;position:relative;z-index:1;}
+  .section.active{display:block;animation:fadein .3s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;
+    padding-bottom:16px;border-bottom:1px solid var(--border);position:relative;}
+  .section-header::after{content:'';position:absolute;bottom:-1px;left:0;width:80px;height:1px;background:var(--accent);}
+  .section-title{font-family:'Teko',sans-serif;font-size:32px;font-weight:500;color:var(--text-bright);letter-spacing:4px;text-transform:uppercase;line-height:1;}
+  .section-title span{color:var(--accent);}
+  .section-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;}
+
+  /* PANELS */
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:2px;position:relative;overflow:hidden;}
+  .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),transparent 60%);opacity:.6;}
+  .panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);}
+  .panel-title{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border-glow);
+    background:transparent;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+    letter-spacing:1px;cursor:pointer;transition:all .2s;border-radius:1px;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.08);box-shadow:0 0 12px rgba(232,160,32,.15);}
+  .btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700;}
+  .btn-primary:hover{background:var(--accent2);color:var(--bg);border-color:var(--accent2);box-shadow:0 0 20px rgba(232,160,32,.4);}
+  .btn-danger{border-color:var(--red);color:var(--red);}
+  .btn-danger:hover{background:rgba(192,57,43,.15);border-color:var(--red-glow);color:var(--red-glow);}
+  .btn-sm{padding:5px 10px;font-size:11px;}
+
+  /* INPUTS */
+  input,select,textarea{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+    font-family:'Rajdhani',sans-serif;font-size:14px;padding:9px 12px;border-radius:1px;outline:none;transition:border-color .2s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,160,32,.1);}
+  select option{background:var(--bg2);}
+  textarea{resize:vertical;line-height:1.5;}
+
+  /* MEMBERS */
+  .members-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;}
+  .search-box{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);padding:0 12px;flex:1;min-width:200px;}
+  .search-box input{border:none;background:none;flex:1;padding:8px 0;box-shadow:none;}
+  .search-box span{color:var(--text-dim);}
+  .sort-label{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:1px;white-space:nowrap;}
+  .members-table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:rgba(255,255,255,.03);border-bottom:1px solid var(--border-glow);}
+  th{padding:10px 14px;text-align:left;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;
+    color:var(--text-dim);text-transform:uppercase;cursor:pointer;white-space:nowrap;user-select:none;transition:color .2s;}
+  th:hover{color:var(--accent);}
+  tbody tr{border-bottom:1px solid rgba(30,51,72,.4);transition:background .15s;}
+  tbody tr:hover{background:rgba(232,160,32,.04);}
+  td{padding:10px 14px;font-size:14px;color:var(--text);}
+  .member-name{font-weight:700;color:var(--text-bright);}
+  .badge{display:inline-block;padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;border-radius:1px;}
+  .badge-leader{background:rgba(232,160,32,.15);color:var(--accent);border:1px solid var(--accent-dim);}
+  .badge-officer{background:rgba(41,128,185,.15);color:var(--blue-light);border:1px solid var(--blue);}
+  .badge-veteran{background:rgba(39,174,96,.15);color:var(--green-glow);border:1px solid var(--green);}
+  .badge-member{background:rgba(255,255,255,.05);color:var(--text-dim);border:1px solid var(--border);}
+  .badge-recruit{background:rgba(192,57,43,.1);color:#e67e73;border:1px solid rgba(192,57,43,.4);}
+  .stat-val{font-family:'Share Tech Mono',monospace;font-size:12px;}
+  .stat-val.high{color:var(--green-glow);}
+  .stat-val.mid{color:var(--accent);}
+  .stat-val.low{color:var(--red-glow);}
+  .power-bar-wrap{display:flex;align-items:center;gap:8px;}
+  .power-bar{width:80px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+  .power-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:2px;}
+  .member-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--panel2),var(--border-glow));
+    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--accent);
+    border:1px solid var(--border);margin-right:8px;vertical-align:middle;}
+  .table-actions{display:flex;gap:6px;}
+
+  /* STAT CARDS */
+  .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+  @media(max-width:900px){.stat-cards{grid-template-columns:repeat(2,1fr);}}
+  .stat-card{background:var(--panel);border:1px solid var(--border);padding:14px 16px;border-radius:1px;position:relative;overflow:hidden;}
+  .stat-card::after{content:'';position:absolute;right:-10px;bottom:-10px;width:60px;height:60px;border-radius:50%;background:rgba(232,160,32,.06);}
+  .stat-card-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;}
+  .stat-card-value{font-family:'Teko',sans-serif;font-size:28px;font-weight:500;color:var(--text-bright);line-height:1;}
+  .stat-card-sub{font-size:12px;color:var(--text-dim);margin-top:4px;}
+
+  /* KNOWLEDGE */
+  .knowledge-layout{display:grid;grid-template-columns:240px 1fr;gap:20px;}
+  @media(max-width:900px){.knowledge-layout{grid-template-columns:1fr;}}
+  .kb-cat{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border:1px solid transparent;
+    border-radius:1px;transition:all .2s;color:var(--text-dim);font-weight:600;letter-spacing:1px;}
+  .kb-cat:hover{background:rgba(255,255,255,.03);color:var(--text);}
+  .kb-cat.active{background:rgba(232,160,32,.08);border-color:var(--accent-dim);color:var(--accent);}
+  .kb-cat .cat-count{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;padding:1px 6px;background:var(--bg3);border-radius:10px;color:var(--text-dim);}
+  .kb-articles{display:flex;flex-direction:column;gap:12px;}
+  .article-card{background:var(--panel);border:1px solid var(--border);padding:16px 20px;cursor:pointer;transition:all .2s;position:relative;border-radius:1px;}
+  .article-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);transition:background .2s;}
+  .article-card:hover{border-color:var(--border-glow);}
+  .article-card:hover::before,.article-card.expanded::before{background:var(--accent);}
+  .article-card.expanded{border-color:var(--border-glow);}
+  .article-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .article-title{font-size:16px;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
+  .article-meta{display:flex;gap:12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px;}
+  .article-preview{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .article-body{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
+  .article-card.expanded .article-body{display:block;}
+  .article-tag{padding:2px 8px;border-radius:1px;font-family:'Share Tech Mono',monospace;font-size:10px;
+    background:rgba(41,128,185,.12);color:var(--blue-light);border:1px solid rgba(41,128,185,.3);white-space:nowrap;}
+  .add-form{background:var(--panel2);border:1px solid var(--border-glow);padding:20px;margin-top:16px;display:none;border-radius:1px;}
+  .add-form.open{display:block;animation:fadein .2s ease;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim);}
+  .form-group input,.form-group select,.form-group textarea{width:100%;}
+
+  /* EVENTS */
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .day-col{display:flex;flex-direction:column;}
+  .day-header{background:var(--bg3);border:1px solid var(--border);border-bottom:none;padding:8px 4px;text-align:center;
+    font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;}
+  .day-header.today{color:var(--accent);background:rgba(232,160,32,.08);border-color:var(--accent-dim);}
+  .day-events{min-height:120px;background:var(--panel);border:1px solid var(--border);padding:6px;display:flex;flex-direction:column;gap:4px;}
+  .event-chip{padding:4px 6px;border-radius:1px;font-size:11px;font-weight:600;cursor:default;border-left:3px solid;}
+  .event-chip.battle{background:rgba(192,57,43,.15);border-color:var(--red-glow);color:#e07070;}
+  .event-chip.alliance{background:rgba(232,160,32,.12);border-color:var(--accent);color:var(--accent);}
+  .event-chip.research{background:rgba(41,128,185,.12);border-color:var(--blue-light);color:var(--blue-light);}
+  .event-chip.build{background:rgba(39,174,96,.12);border-color:var(--green-glow);color:var(--green-glow);}
+  .event-chip.gather{background:rgba(142,68,173,.12);border-color:#9b59b6;color:#9b59b6;}
+  .event-list{display:flex;flex-direction:column;gap:10px;}
+  .event-row{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--border);padding:12px 16px;border-radius:1px;position:relative;}
+  .event-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .event-row.battle::before{background:var(--red-glow);}
+  .event-row.alliance::before{background:var(--accent);}
+  .event-row.research::before{background:var(--blue-light);}
+  .event-row.build::before{background:var(--green-glow);}
+  .event-row.gather::before{background:#9b59b6;}
+  .event-day-badge{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);white-space:nowrap;letter-spacing:1px;}
+  .event-info{flex:1;}
+  .event-name{font-weight:700;color:var(--text-bright);font-size:15px;margin-bottom:3px;}
+  .event-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
+  .event-time{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+  /* ROLES */
+  .roles-layout{display:grid;grid-template-columns:1fr 1.4fr;gap:20px;}
+  @media(max-width:1000px){.roles-layout{grid-template-columns:1fr;}}
+  .role-def{background:var(--panel);border:1px solid var(--border);padding:14px 16px;border-radius:1px;position:relative;}
+  .role-def::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .role-leader::before{background:var(--accent);}
+  .role-officer::before{background:var(--blue-light);}
+  .role-veteran::before{background:var(--green-glow);}
+  .role-member::before{background:var(--text-dim);}
+  .role-recruit::before{background:var(--red-glow);}
+  .role-def-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .role-def-name{font-size:16px;font-weight:700;color:var(--text-bright);}
+  .role-def-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
+  .role-perms{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .perm-chip{padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:10px;border-radius:1px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);}
+  .assign-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(30,51,72,.4);transition:background .15s;}
+  .assign-row:hover{background:rgba(232,160,32,.03);}
+  .assign-name{flex:1;font-weight:700;color:var(--text-bright);}
+  .assign-current{min-width:100px;}
+  .assign-action{min-width:140px;}
+  .role-select{width:100%;padding:6px 10px;font-size:12px;}
+
+  /* MODALS */
+  .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;animation:fadein .2s ease;}
+  .modal{background:var(--panel);border:1px solid var(--border-glow);width:min(600px,95vw);max-height:90vh;overflow-y:auto;
+    border-radius:2px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(30,70,110,.2);position:relative;}
+  .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue),transparent);}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .modal-title{font-family:'Teko',sans-serif;font-size:22px;letter-spacing:3px;color:var(--text-bright);text-transform:uppercase;}
+  .modal-close{background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;transition:color .2s;}
+  .modal-close:hover{color:var(--red-glow);}
+  .modal-body{padding:20px;}
+  .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
+
+  /* MISC */
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg2);}
+  ::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-dim);}
+  .flex{display:flex;}.gap-10{gap:10px;}.mt-16{margin-top:16px;}
+  .text-dim{color:var(--text-dim);font-size:12px;}
+  .empty-state{text-align:center;padding:40px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;}
+  .role-def-list{display:flex;flex-direction:column;gap:10px;}
+  .kb-categories{display:flex;flex-direction:column;gap:4px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">SYNCING ALLIANCE DATA...</div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo-block">
+    <div class="logo-icon">&#9876;</div>
+    <div>
+      <div class="logo-text">LAST <span>WAR</span></div>
+      <div class="alliance-name">ALLIANCE COMMAND</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showSection('members',this)">&#128101; ROSTER</button>
+    <button class="nav-btn" onclick="showSection('knowledge',this)">&#128218; INTEL</button>
+    <button class="nav-btn" onclick="showSection('events',this)">&#128197; OPERATIONS</button>
+    <button class="nav-btn" onclick="showSection('roles',this)">&#127894; COMMAND</button>
+  </nav>
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <div class="status-text">LIVE</div>
+  </div>
+</div>
+
+<!-- MEMBERS -->
+<div class="section active" id="section-members">
+  <div class="section-header">
+    <div>
+      <div class="section-title">ALLIANCE <span>ROSTER</span></div>
+      <div class="section-sub">// MEMBER REGISTRY &amp; STATS — LIVE SYNC</div>
+    </div>
+    <button class="btn btn-primary" onclick="openAddMemberModal()">+ ADD MEMBER</button>
+  </div>
+  <div class="stat-cards">
+    <div class="stat-card"><div class="stat-card-label">Total Members</div><div class="stat-card-value" id="sc-total">—</div><div class="stat-card-sub">Alliance capacity</div></div>
+    <div class="stat-card"><div class="stat-card-label">Total Power</div><div class="stat-card-value" id="sc-power">—</div><div class="stat-card-sub">Combined force</div></div>
+    <div class="stat-card"><div class="stat-card-label">Avg Kills</div><div class="stat-card-value" id="sc-kills">—</div><div class="stat-card-sub">Per member</div></div>
+    <div class="stat-card"><div class="stat-card-label">Officers+</div><div class="stat-card-value" id="sc-officers">—</div><div class="stat-card-sub">Command staff</div></div>
+  </div>
+  <div class="members-toolbar">
+    <div class="search-box"><span>&#128269;</span><input type="text" id="member-search" placeholder="SEARCH MEMBERS..." oninput="renderMembers()"></div>
+    <span class="sort-label">SORT BY:</span>
+    <select id="sort-col" onchange="renderMembers()" style="width:auto">
+      <option value="name">Name</option><option value="power">Power</option><option value="kills">Kills</option>
+      <option value="donations">Donations</option><option value="level">Level</option><option value="role">Role</option>
+    </select>
+    <select id="sort-dir" onchange="renderMembers()" style="width:auto">
+      <option value="desc">&#8595; Desc</option><option value="asc">&#8593; Asc</option>
+    </select>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">// MEMBER DATABASE</span><span id="member-count" class="text-dim"></span></div>
+    <div class="members-table-wrap">
+      <table><thead><tr>
+        <th onclick="sortBy('name')">COMMANDER</th>
+        <th onclick="sortBy('level')">LVL</th>
+        <th onclick="sortBy('role')">RANK</th>
+        <th onclick="sortBy('power')">POWER</th>
+        <th onclick="sortBy('kills')">KILLS</th>
+        <th onclick="sortBy('deaths')">DEATHS</th>
+        <th onclick="sortBy('donations')">DONATIONS</th>
+        <th onclick="sortBy('activity')">ACTIVITY</th>
+        <th>ACTIONS</th>
+      </tr></thead>
+      <tbody id="members-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- KNOWLEDGE -->
+<div class="section" id="section-knowledge">
+  <div class="section-header">
+    <div><div class="section-title">ALLIANCE <span>INTEL</span></div><div class="section-sub">// KNOWLEDGE BASE &amp; STRATEGY ARCHIVE</div></div>
+    <button class="btn btn-primary" onclick="toggleAddArticle()">+ NEW ENTRY</button>
+  </div>
+  <div class="add-form" id="add-article-form">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">TITLE</label><input type="text" id="art-title" placeholder="Article title..."></div>
+      <div class="form-group"><label class="form-label">CATEGORY</label>
+        <select id="art-cat">
+          <option value="Strategy">Strategy</option><option value="Building">Building</option>
+          <option value="Research">Research</option><option value="Events">Events</option>
+          <option value="Recruitment">Recruitment</option><option value="Rules">Rules</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">AUTHOR</label><input type="text" id="art-author" placeholder="Commander name..."></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">CONTENT</label>
+      <textarea id="art-content" rows="5" placeholder="Enter article content..."></textarea></div>
+    <div class="flex gap-10">
+      <button class="btn btn-primary" onclick="saveArticle()">SAVE ENTRY</button>
+      <button class="btn" onclick="toggleAddArticle()">CANCEL</button>
+    </div>
+  </div>
+  <div class="knowledge-layout mt-16">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// CATEGORIES</span></div>
+      <div style="padding:10px" class="kb-categories" id="kb-categories"></div>
+    </div>
+    <div class="kb-articles" id="kb-articles"></div>
+  </div>
+</div>
+
+<!-- EVENTS -->
+<div class="section" id="section-events">
+  <div class="section-header">
+    <div><div class="section-title">WEEKLY <span>OPERATIONS</span></div><div class="section-sub">// REPEATING EVENT SCHEDULE</div></div>
+    <button class="btn btn-primary" onclick="openAddEventModal()">+ ADD EVENT</button>
+  </div>
+  <div class="panel" style="margin-bottom:24px">
+    <div class="panel-header"><span class="panel-title">// WEEKLY CALENDAR</span></div>
+    <div style="padding:12px"><div class="week-grid" id="week-grid"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">// ALL SCHEDULED EVENTS</span></div>
+    <div style="padding:12px" class="event-list" id="event-list"></div>
+  </div>
+</div>
+
+<!-- ROLES -->
+<div class="section" id="section-roles">
+  <div class="section-header">
+    <div><div class="section-title">COMMAND <span>STRUCTURE</span></div><div class="section-sub">// ROLE DEFINITIONS &amp; ASSIGNMENTS</div></div>
+  </div>
+  <div class="roles-layout">
+    <div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px">// RANK DEFINITIONS</div>
+      <div class="role-def-list">
+        <div class="role-def role-leader">
+          <div class="role-def-header"><span style="font-size:20px">&#128081;</span><span class="role-def-name">LEADER</span><span class="badge badge-leader" style="margin-left:auto">R5</span></div>
+          <div class="role-def-desc">Alliance supreme commander. Full access to all controls, treasury, and member management.</div>
+          <div class="role-perms"><span class="perm-chip">KICK MEMBERS</span><span class="perm-chip">MANAGE TREASURY</span><span class="perm-chip">DECLARE WAR</span><span class="perm-chip">PROMOTE ALL</span></div>
+        </div>
+        <div class="role-def role-officer">
+          <div class="role-def-header"><span style="font-size:20px">&#11088;</span><span class="role-def-name">OFFICER</span><span class="badge badge-officer" style="margin-left:auto">R4</span></div>
+          <div class="role-def-desc">Senior commanders assisting with operations, recruitment, and daily management.</div>
+          <div class="role-perms"><span class="perm-chip">ACCEPT REQUESTS</span><span class="perm-chip">KICK RECRUITS</span><span class="perm-chip">SEND MAIL</span><span class="perm-chip">PROMOTE TO VETERAN</span></div>
+        </div>
+        <div class="role-def role-veteran">
+          <div class="role-def-header"><span style="font-size:20px">&#128737;</span><span class="role-def-name">VETERAN</span><span class="badge badge-veteran" style="margin-left:auto">R3</span></div>
+          <div class="role-def-desc">Trusted members with proven contribution. Can assist newer members.</div>
+          <div class="role-perms"><span class="perm-chip">ALLIANCE HELP</span><span class="perm-chip">SUGGEST TARGETS</span></div>
+        </div>
+        <div class="role-def role-member">
+          <div class="role-def-header"><span style="font-size:20px">&#9876;</span><span class="role-def-name">MEMBER</span><span class="badge badge-member" style="margin-left:auto">R2</span></div>
+          <div class="role-def-desc">Standard members. Must meet minimum power and donation requirements.</div>
+          <div class="role-perms"><span class="perm-chip">ALLIANCE HELP</span><span class="perm-chip">JOIN RALLIES</span></div>
+        </div>
+        <div class="role-def role-recruit">
+          <div class="role-def-header"><span style="font-size:20px">&#128304;</span><span class="role-def-name">RECRUIT</span><span class="badge badge-recruit" style="margin-left:auto">R1</span></div>
+          <div class="role-def-desc">New members on probation. Must donate within first week.</div>
+          <div class="role-perms"><span class="perm-chip">BASIC HELP</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">// ROSTER ROLE ASSIGNMENTS</span>
+        <button class="btn btn-sm btn-primary" onclick="saveRoles()">&#128190; SAVE ALL</button>
+      </div>
+      <div id="role-assignments"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD MEMBER -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">ADD COMMANDER</span><button class="modal-close" onclick="closeModal('modal-member')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">COMMANDER NAME *</label><input type="text" id="m-name" placeholder="In-game name"></div>
+        <div class="form-group"><label class="form-label">LEVEL</label><input type="number" id="m-level" placeholder="HQ Level" min="1" max="30"></div>
+        <div class="form-group"><label class="form-label">ROLE</label>
+          <select id="m-role"><option value="Recruit">Recruit</option><option value="Member" selected>Member</option>
+            <option value="Veteran">Veteran</option><option value="Officer">Officer</option><option value="Leader">Leader</option></select></div>
+        <div class="form-group"><label class="form-label">POWER</label><input type="number" id="m-power" placeholder="Total power"></div>
+        <div class="form-group"><label class="form-label">KILLS</label><input type="number" id="m-kills" placeholder="Kill count"></div>
+        <div class="form-group"><label class="form-label">DEATHS</label><input type="number" id="m-deaths" placeholder="Death count"></div>
+        <div class="form-group"><label class="form-label">DONATIONS</label><input type="number" id="m-donations" placeholder="Total donations"></div>
+        <div class="form-group"><label class="form-label">ACTIVITY</label>
+          <select id="m-activity"><option value="Daily">Daily</option><option value="High">High (5-6/wk)</option>
+            <option value="Medium">Medium (3-4/wk)</option><option value="Low">Low (1-2/wk)</option><option value="Inactive">Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-member')">CANCEL</button><button class="btn btn-primary" onclick="saveMember()">ADD COMMANDER</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT MEMBER -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">EDIT COMMANDER</span><button class="modal-close" onclick="closeModal('modal-edit')">&#10005;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-doc-id">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">COMMANDER NAME *</label><input type="text" id="e-name"></div>
+        <div class="form-group"><label class="form-label">LEVEL</label><input type="number" id="e-level" min="1" max="30"></div>
+        <div class="form-group"><label class="form-label">ROLE</label>
+          <select id="e-role"><option value="Recruit">Recruit</option><option value="Member">Member</option>
+            <option value="Veteran">Veteran</option><option value="Officer">Officer</option><option value="Leader">Leader</option></select></div>
+        <div class="form-group"><label class="form-label">POWER</label><input type="number" id="e-power"></div>
+        <div class="form-group"><label class="form-label">KILLS</label><input type="number" id="e-kills"></div>
+        <div class="form-group"><label class="form-label">DEATHS</label><input type="number" id="e-deaths"></div>
+        <div class="form-group"><label class="form-label">DONATIONS</label><input type="number" id="e-donations"></div>
+        <div class="form-group"><label class="form-label">ACTIVITY</label>
+          <select id="e-activity"><option value="Daily">Daily</option><option value="High">High (5-6/wk)</option>
+            <option value="Medium">Medium (3-4/wk)</option><option value="Low">Low (1-2/wk)</option><option value="Inactive">Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteMember()">REMOVE</button>
+      <button class="btn" onclick="closeModal('modal-edit')">CANCEL</button>
+      <button class="btn btn-primary" onclick="updateMember()">SAVE CHANGES</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD EVENT -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">SCHEDULE OPERATION</span><button class="modal-close" onclick="closeModal('modal-event')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:12px"><label class="form-label">EVENT NAME *</label><input type="text" id="ev-name" style="width:100%" placeholder="Event name..."></div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">TYPE</label>
+          <select id="ev-type"><option value="battle">Battle / PvP</option><option value="alliance">Alliance Event</option>
+            <option value="research">Research Push</option><option value="build">Build Day</option><option value="gather">Gathering</option></select></div>
+        <div class="form-group"><label class="form-label">DAY OF WEEK</label>
+          <select id="ev-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option>
+            <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></div>
+        <div class="form-group"><label class="form-label">START TIME</label><input type="time" id="ev-start"></div>
+        <div class="form-group"><label class="form-label">END TIME</label><input type="time" id="ev-end"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">NOTES / INSTRUCTIONS</label>
+        <textarea id="ev-notes" rows="3" style="width:100%" placeholder="Participation requirements, strategy notes..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-event')">CANCEL</button><button class="btn btn-primary" onclick="saveEvent()">SCHEDULE</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBrqg4oFP7yOlOGAIvGGRlHFCOyhSZsn5s",
+  authDomain: "ducklw.firebaseapp.com",
+  databaseURL: "https://ducklw-default-rtdb.firebaseio.com",
+  projectId: "ducklw",
+  storageBucket: "ducklw.firebasestorage.app",
+  messagingSenderId: "83150597309",
+  appId: "1:83150597309:web:46961b4f7bdc7cc5dd1bd4",
+  measurementId: "G-TQHMZ75XEZ"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+let members = [], articles = [], events = [];
+let currentKbCat = 'All', sortCol = 'power', sortDir = 'desc';
+
+const loading = document.getElementById('loading-overlay');
+
+// ===== REAL-TIME LISTENERS =====
+let loaded = { members: false, articles: false, events: false };
+function checkAllLoaded() {
+  if (loaded.members && loaded.articles && loaded.events) {
+    loading.classList.add('hidden');
+  }
+}
+
+onSnapshot(query(collection(db,'members'), orderBy('name')), snap => {
+  members = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  renderMembers();
+  loaded.members = true; checkAllLoaded();
+}, err => { console.error('members:', err); loaded.members = true; checkAllLoaded(); });
+
+onSnapshot(query(collection(db,'articles'), orderBy('date','desc')), snap => {
+  articles = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  renderKnowledge();
+  loaded.articles = true; checkAllLoaded();
+}, err => { console.error('articles:', err); loaded.articles = true; checkAllLoaded(); });
+
+onSnapshot(query(collection(db,'events'), orderBy('day')), snap => {
+  events = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+  renderEvents();
+  loaded.events = true; checkAllLoaded();
+}, err => { console.error('events:', err); loaded.events = true; checkAllLoaded(); });
+
+// ===== NAV =====
+window.showSection = function(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'roles') renderRoles();
+};
+
+// ===== MEMBERS =====
+function fmtNum(n) {
+  if (!n) return '0'; n = Number(n);
+  if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
+  if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+  return n.toString();
+}
+
+window.sortBy = function(col) {
+  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = 'desc'; }
+  document.getElementById('sort-col').value = col;
+  document.getElementById('sort-dir').value = sortDir;
+  renderMembers();
+};
+
+function renderMembers() {
+  const search = document.getElementById('member-search').value.toLowerCase();
+  const col = document.getElementById('sort-col').value || sortCol;
+  const dir = document.getElementById('sort-dir').value || sortDir;
+  const ro = { Leader:0, Officer:1, Veteran:2, Member:3, Recruit:4 };
+  let fil = members.filter(m => (m.name||'').toLowerCase().includes(search));
+  fil.sort((a,b) => {
+    let va = col==='role' ? ro[a.role]??5 : (Number(a[col])||a[col]||0);
+    let vb = col==='role' ? ro[b.role]??5 : (Number(b[col])||b[col]||0);
+    if (typeof va==='string') va=va.toLowerCase();
+    if (typeof vb==='string') vb=vb.toLowerCase();
+    return va<vb?(dir==='asc'?-1:1):va>vb?(dir==='asc'?1:-1):0;
+  });
+  const maxP = Math.max(...members.map(m=>m.power||0), 1);
+  document.getElementById('members-tbody').innerHTML = fil.length===0
+    ? '<tr><td colspan="9" class="empty-state">NO MEMBERS FOUND</td></tr>'
+    : fil.map(m => {
+        const rk  = (m.role||'member').toLowerCase();
+        const pct = Math.round(((m.power||0)/maxP)*100);
+        const ac  = m.activity==='Daily'||m.activity==='High' ? 'high' : m.activity==='Medium' ? 'mid' : 'low';
+        return `<tr>
+          <td><span class="member-avatar">${(m.name||'?').slice(0,2).toUpperCase()}</span><span class="member-name">${m.name}</span></td>
+          <td><span class="stat-val">${m.level||'-'}</span></td>
+          <td><span class="badge badge-${rk}">${(m.role||'Member').toUpperCase()}</span></td>
+          <td><div class="power-bar-wrap"><div class="power-bar"><div class="power-bar-fill" style="width:${pct}%"></div></div>
+            <span class="stat-val ${pct>60?'high':pct>30?'mid':'low'}">${fmtNum(m.power)}</span></div></td>
+          <td><span class="stat-val high">${fmtNum(m.kills)}</span></td>
+          <td><span class="stat-val low">${fmtNum(m.deaths)}</span></td>
+          <td><span class="stat-val mid">${fmtNum(m.donations)}</span></td>
+          <td><span class="stat-val ${ac}">${m.activity||'-'}</span></td>
+          <td><button class="btn btn-sm" onclick="openEditModal('${m._id}')">EDIT</button></td>
+        </tr>`;
+      }).join('');
+  document.getElementById('sc-total').textContent    = members.length;
+  document.getElementById('sc-power').textContent    = fmtNum(members.reduce((s,m)=>s+(m.power||0),0));
+  document.getElementById('sc-kills').textContent    = fmtNum(members.length ? Math.round(members.reduce((s,m)=>s+(m.kills||0),0)/members.length) : 0);
+  document.getElementById('sc-officers').textContent = members.filter(m=>m.role==='Officer'||m.role==='Leader').length;
+  document.getElementById('member-count').textContent = `${fil.length} of ${members.length} members`;
+}
+
+window.openAddMemberModal = function() {
+  ['m-name','m-level','m-power','m-kills','m-deaths','m-donations'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-role').value='Member';
+  document.getElementById('m-activity').value='Daily';
+  openModal('modal-member');
+};
+
+window.saveMember = async function() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { alert('Commander name required.'); return; }
+  await addDoc(collection(db,'members'), {
+    name, level:Number(document.getElementById('m-level').value)||1,
+    role:document.getElementById('m-role').value,
+    power:Number(document.getElementById('m-power').value)||0,
+    kills:Number(document.getElementById('m-kills').value)||0,
+    deaths:Number(document.getElementById('m-deaths').value)||0,
+    donations:Number(document.getElementById('m-donations').value)||0,
+    activity:document.getElementById('m-activity').value,
+    addedAt: new Date().toISOString()
+  });
+  closeModal('modal-member');
+};
+
+window.openEditModal = function(id) {
+  const m = members.find(x=>x._id===id); if (!m) return;
+  document.getElementById('edit-doc-id').value = id;
+  document.getElementById('e-name').value     = m.name||'';
+  document.getElementById('e-level').value    = m.level||'';
+  document.getElementById('e-role').value     = m.role||'Member';
+  document.getElementById('e-power').value    = m.power||'';
+  document.getElementById('e-kills').value    = m.kills||'';
+  document.getElementById('e-deaths').value   = m.deaths||'';
+  document.getElementById('e-donations').value= m.donations||'';
+  document.getElementById('e-activity').value = m.activity||'Daily';
+  openModal('modal-edit');
+};
+
+window.updateMember = async function() {
+  const id = document.getElementById('edit-doc-id').value;
+  await updateDoc(doc(db,'members',id), {
+    name:document.getElementById('e-name').value.trim(),
+    level:Number(document.getElementById('e-level').value)||1,
+    role:document.getElementById('e-role').value,
+    power:Number(document.getElementById('e-power').value)||0,
+    kills:Number(document.getElementById('e-kills').value)||0,
+    deaths:Number(document.getElementById('e-deaths').value)||0,
+    donations:Number(document.getElementById('e-donations').value)||0,
+    activity:document.getElementById('e-activity').value,
+    updatedAt: new Date().toISOString()
+  });
+  closeModal('modal-edit');
+};
+
+window.deleteMember = async function() {
+  const id = document.getElementById('edit-doc-id').value;
+  const m  = members.find(x=>x._id===id);
+  if (!confirm('Remove ' + m?.name + ' from roster?')) return;
+  await deleteDoc(doc(db,'members',id));
+  closeModal('modal-edit');
+};
+
+// ===== KNOWLEDGE =====
+const catIcons = { Strategy:'⚔', Building:'🏗', Research:'🔬', Events:'📅', Recruitment:'📢', Rules:'📜', All:'📚' };
+
+window.toggleAddArticle = function() {
+  document.getElementById('add-article-form').classList.toggle('open');
+};
+
+window.saveArticle = async function() {
+  const title   = document.getElementById('art-title').value.trim();
+  const content = document.getElementById('art-content').value.trim();
+  if (!title||!content) { alert('Title and content required.'); return; }
+  await addDoc(collection(db,'articles'), {
+    title, category:document.getElementById('art-cat').value,
+    author:document.getElementById('art-author').value.trim()||'Unknown',
+    date:new Date().toISOString().slice(0,10), content,
+    addedAt: new Date().toISOString()
+  });
+  document.getElementById('art-title').value='';
+  document.getElementById('art-content').value='';
+  document.getElementById('art-author').value='';
+  document.getElementById('add-article-form').classList.remove('open');
+};
+
+function renderKnowledge() {
+  const cats = ['All', ...new Set(articles.map(a=>a.category))];
+  const cnt  = {}; articles.forEach(a=>{cnt[a.category]=(cnt[a.category]||0)+1;});
+  document.getElementById('kb-categories').innerHTML = cats.map(c =>
+    `<div class="kb-cat ${c===currentKbCat?'active':''}" onclick="setKbCat('${c}')">
+      <span>${catIcons[c]||'📄'} ${c}</span>
+      <span class="cat-count">${c==='All'?articles.length:cnt[c]||0}</span>
+    </div>`).join('');
+  const fil = currentKbCat==='All' ? articles : articles.filter(a=>a.category===currentKbCat);
+  document.getElementById('kb-articles').innerHTML = fil.length===0
+    ? '<div class="empty-state">NO INTEL ENTRIES FOUND</div>'
+    : fil.map((a,i) => `
+      <div class="article-card" id="art-${i}" onclick="toggleArticle('art-${i}')">
+        <div class="article-header">
+          <div>
+            <div class="article-title">${a.title}</div>
+            <div class="article-meta"><span>&#128197; ${a.date}</span><span>&#128100; ${a.author}</span></div>
+          </div>
+          <span class="article-tag">${catIcons[a.category]||''} ${a.category}</span>
+        </div>
+        <div class="article-preview">${(a.content||'').slice(0,120)}${(a.content||'').length>120?'...':''}</div>
+        <div class="article-body">${a.content||''}</div>
+      </div>`).join('');
+}
+window.setKbCat    = function(cat){ currentKbCat=cat; renderKnowledge(); };
+window.toggleArticle = function(id){ document.getElementById(id).classList.toggle('expanded'); };
+
+// ===== EVENTS =====
+const DAYS  = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const TLAB  = { battle:'Battle', alliance:'Alliance', research:'Research', build:'Build', gather:'Gather' };
+
+function renderEvents() {
+  const today = new Date().getDay();
+  document.getElementById('week-grid').innerHTML = DAYS.map((d,i) => {
+    const de = events.filter(e=>e.day==i);
+    return `<div class="day-col">
+      <div class="day-header ${i===today?'today':''}">${d}${i===today?' ◆':''}</div>
+      <div class="day-events">${de.map(e=>`<div class="event-chip ${e.type}">${(e.name||'').length>14?(e.name||'').slice(0,12)+'…':(e.name||'')}</div>`).join('')
+        ||'<div style="color:var(--text-dim);font-size:10px;padding:4px;font-family:monospace">—</div>'}</div>
+    </div>`;
+  }).join('');
+
+  const sorted = [...events].sort((a,b)=>a.day-b.day);
+  document.getElementById('event-list').innerHTML = sorted.length===0
+    ? '<div class="empty-state">NO EVENTS SCHEDULED</div>'
+    : sorted.map(e => `
+      <div class="event-row ${e.type}">
+        <span class="event-day-badge">${DAYS[e.day]}</span>
+        <div class="event-info">
+          <div class="event-name">${e.name}</div>
+          <div class="event-desc">${e.notes||''}</div>
+          ${e.start?`<div class="event-time">&#128336; ${e.start}${e.end?' — '+e.end:''}</div>`:''}
+        </div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);white-space:nowrap">${TLAB[e.type]||e.type}</span>
+        <button class="btn btn-sm btn-danger" onclick="deleteEvent('${e._id}')">&#10005;</button>
+      </div>`).join('');
+}
+
+window.openAddEventModal = function(){ openModal('modal-event'); };
+
+window.saveEvent = async function() {
+  const name = document.getElementById('ev-name').value.trim();
+  if (!name) { alert('Event name required.'); return; }
+  await addDoc(collection(db,'events'), {
+    name, type:document.getElementById('ev-type').value,
+    day:Number(document.getElementById('ev-day').value),
+    start:document.getElementById('ev-start').value,
+    end:document.getElementById('ev-end').value,
+    notes:document.getElementById('ev-notes').value.trim(),
+    addedAt: new Date().toISOString()
+  });
+  document.getElementById('ev-name').value='';
+  document.getElementById('ev-notes').value='';
+  closeModal('modal-event');
+};
+
+window.deleteEvent = async function(id) {
+  if (!confirm('Remove this event?')) return;
+  await deleteDoc(doc(db,'events',id));
+};
+
+// ===== ROLES =====
+function renderRoles() {
+  const ro = ['Leader','Officer','Veteran','Member','Recruit'];
+  document.getElementById('role-assignments').innerHTML = members.length===0
+    ? '<div class="empty-state">NO MEMBERS IN ROSTER</div>'
+    : members.map(m => `
+      <div class="assign-row">
+        <div class="assign-name"><span class="member-avatar">${(m.name||'?').slice(0,2).toUpperCase()}</span>${m.name}</div>
+        <div class="assign-current"><span class="badge badge-${(m.role||'member').toLowerCase()}">${(m.role||'Member').toUpperCase()}</span></div>
+        <div class="assign-action"><select class="role-select" id="role-sel-${m._id}">
+          ${ro.map(r=>`<option value="${r}" ${m.role===r?'selected':''}>${r}</option>`).join('')}
+        </select></div>
+      </div>`).join('');
+}
+
+window.saveRoles = async function() {
+  await Promise.all(members.map(m => {
+    const sel = document.getElementById('role-sel-' + m._id);
+    return sel ? updateDoc(doc(db,'members',m._id), { role:sel.value, updatedAt:new Date().toISOString() }) : null;
+  }).filter(Boolean));
+  const btn = document.querySelector('[onclick="saveRoles()"]');
+  btn.textContent = '&#10003; SAVED'; btn.style.background = 'var(--green)';
+  setTimeout(()=>{ btn.textContent='&#128190; SAVE ALL'; btn.style.background=''; }, 1500);
+};
+
+// ===== MODALS =====
+window.openModal  = function(id){ document.getElementById(id).classList.add('open'); };
+window.closeModal = function(id){ document.getElementById(id).classList.remove('open'); };
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
