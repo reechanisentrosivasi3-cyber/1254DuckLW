@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duck Alliance Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Teko:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c10;--bg2:#0d1318;--bg3:#111920;--panel:#0f1923;--panel2:#152030;
+  --border:#1e3348;--border-glow:#1e4a6e;--accent:#e8a020;--accent2:#f0c050;
+  --accent-dim:#7a5210;--red:#c0392b;--red-glow:#e74c3c;--green:#27ae60;
+  --green-glow:#2ecc71;--blue:#2980b9;--blue-light:#3498db;--text:#c8dae8;
+  --text-dim:#5a7a90;--text-bright:#e8f4ff;--hud:rgba(30,70,110,0.4);
+  --purple:#8e44ad;--purple-light:#9b59b6;--orange:#e67e22;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--hud) 1px,transparent 1px),linear-gradient(90deg,var(--hud) 1px,transparent 1px);
+  background-size:40px 40px;opacity:.4;}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;z-index:500;background:rgba(8,12,16,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#loading-overlay.hidden{display:none;}
+.loading-spinner{width:40px;height:40px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:3px;}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border-glow);backdrop-filter:blur(12px);display:flex;align-items:center;box-shadow:0 2px 30px rgba(0,100,200,.15);}
+.logo-block{display:flex;align-items:center;gap:12px;padding:10px 24px;border-right:1px solid var(--border);background:linear-gradient(90deg,rgba(232,160,32,.08),transparent);flex-shrink:0;}
+.logo-icon{width:34px;height:34px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--bg);font-weight:700;animation:pulse-icon 3s ease-in-out infinite;}
+@keyframes pulse-icon{0%,100%{box-shadow:0 0 8px var(--accent)}50%{box-shadow:0 0 20px var(--accent),0 0 40px rgba(232,160,32,.3)}}
+.logo-text{font-family:'Teko',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text-bright);}
+.logo-text span{color:var(--accent);}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:2px;}
+.nav{display:flex;flex:1;overflow-x:auto;}
+.nav::-webkit-scrollbar{height:2px;}
+.nav::-webkit-scrollbar-thumb{background:var(--border-glow);}
+.nav-btn{display:flex;align-items:center;gap:6px;padding:14px 18px;cursor:pointer;border:none;background:none;color:var(--text-dim);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.nav-btn:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(232,160,32,.05);}
+.status-bar{display:flex;align-items:center;gap:8px;padding:0 16px;border-left:1px solid var(--border);flex-shrink:0;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green-glow);box-shadow:0 0 6px var(--green-glow);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.status-text{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+
+/* SECTIONS */
+.section{display:none;padding:24px;position:relative;z-index:1;}
+.section.active{display:block;animation:fadein .3s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);position:relative;}
+.section-header::after{content:'';position:absolute;bottom:-1px;left:0;width:80px;height:1px;background:var(--accent);}
+.section-title{font-family:'Teko',sans-serif;font-size:28px;font-weight:500;color:var(--text-bright);letter-spacing:4px;text-transform:uppercase;line-height:1;}
+.section-title span{color:var(--accent);}
+.section-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:3px;}
+
+/* PANELS */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:2px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),transparent 60%);opacity:.6;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);}
+.panel-title{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:1px solid var(--border-glow);background:transparent;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .2s;border-radius:1px;}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.08);}
+.btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700;}
+.btn-primary:hover{background:var(--accent2);color:var(--bg);}
+.btn-danger{border-color:var(--red);color:var(--red);}
+.btn-danger:hover{background:rgba(192,57,43,.15);border-color:var(--red-glow);color:var(--red-glow);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+
+/* INPUTS */
+input,select,textarea{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:8px 11px;border-radius:1px;outline:none;transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:var(--bg2);}
+textarea{resize:vertical;line-height:1.5;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);}
+.form-group input,.form-group select,.form-group textarea{width:100%;}
+.add-form{background:var(--panel2);border:1px solid var(--border-glow);padding:18px;margin-bottom:16px;display:none;border-radius:1px;}
+.add-form.open{display:block;animation:fadein .2s ease;}
+
+/* TABLES */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:rgba(255,255,255,.03);border-bottom:1px solid var(--border-glow);}
+th{padding:9px 12px;text-align:left;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;cursor:pointer;white-space:nowrap;user-select:none;transition:color .2s;}
+th:hover{color:var(--accent);}
+tbody tr{border-bottom:1px solid rgba(30,51,72,.4);transition:background .15s;}
+tbody tr:hover{background:rgba(232,160,32,.04);}
+td{padding:9px 12px;font-size:13px;color:var(--text);}
+.bold{font-weight:700;color:var(--text-bright);}
+.mono{font-family:'Share Tech Mono',monospace;font-size:11px;}
+.high{color:var(--green-glow);}
+.mid{color:var(--accent);}
+.low{color:var(--red-glow);}
+.dim{color:var(--text-dim);}
+
+/* BADGES */
+.badge{display:inline-block;padding:1px 7px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;border-radius:1px;}
+.badge-r5{background:rgba(232,160,32,.2);color:var(--accent);border:1px solid var(--accent-dim);}
+.badge-r4{background:rgba(41,128,185,.2);color:var(--blue-light);border:1px solid var(--blue);}
+.badge-r3{background:rgba(39,174,96,.2);color:var(--green-glow);border:1px solid var(--green);}
+.badge-r2{background:rgba(255,255,255,.05);color:var(--text-dim);border:1px solid var(--border);}
+.badge-r1{background:rgba(192,57,43,.1);color:#e67e73;border:1px solid rgba(192,57,43,.4);}
+.badge-kick{background:rgba(231,76,60,.2);color:var(--red-glow);border:1px solid var(--red);}
+.badge-note{background:rgba(39,174,96,.1);color:var(--green-glow);border:1px solid rgba(39,174,96,.3);}
+.badge-tank{background:rgba(41,128,185,.12);color:var(--blue-light);border:1px solid rgba(41,128,185,.3);}
+.badge-air{background:rgba(142,68,173,.12);color:#c39bd3;border:1px solid rgba(142,68,173,.3);}
+.badge-mix{background:rgba(232,160,32,.12);color:var(--accent);border:1px solid var(--accent-dim);}
+
+/* MEMBER AVATAR */
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--panel2),var(--border-glow));display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:var(--accent);border:1px solid var(--border);margin-right:7px;vertical-align:middle;}
+.power-bar-wrap{display:flex;align-items:center;gap:7px;}
+.power-bar{width:60px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.power-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--accent));border-radius:2px;}
+
+/* STAT CARDS */
+.stat-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+@media(max-width:1100px){.stat-cards{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.stat-cards{grid-template-columns:repeat(2,1fr);}}
+.stat-card{background:var(--panel);border:1px solid var(--border);padding:12px 14px;border-radius:1px;position:relative;overflow:hidden;}
+.stat-card::after{content:'';position:absolute;right:-8px;bottom:-8px;width:50px;height:50px;border-radius:50%;background:rgba(232,160,32,.05);}
+.stat-card-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;}
+.stat-card-value{font-family:'Teko',sans-serif;font-size:24px;font-weight:500;color:var(--text-bright);line-height:1;}
+.stat-card-sub{font-size:11px;color:var(--text-dim);margin-top:3px;}
+
+/* TOOLBAR */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;}
+.search-box{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border);padding:0 10px;flex:1;min-width:180px;}
+.search-box input{border:none;background:none;flex:1;padding:7px 0;box-shadow:none;font-size:13px;}
+.search-box span{color:var(--text-dim);}
+.sort-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);white-space:nowrap;}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;animation:fadein .2s ease;}
+.modal{background:var(--panel);border:1px solid var(--border-glow);width:min(640px,96vw);max-height:90vh;overflow-y:auto;border-radius:2px;box-shadow:0 20px 60px rgba(0,0,0,.6);position:relative;}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue),transparent);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.modal-title{font-family:'Teko',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text-bright);text-transform:uppercase;}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;transition:color .2s;}
+.modal-close:hover{color:var(--red-glow);}
+.modal-body{padding:18px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--border);}
+
+/* KNOWLEDGE */
+.knowledge-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;}
+@media(max-width:900px){.knowledge-layout{grid-template-columns:1fr;}}
+.kb-cat{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;border:1px solid transparent;border-radius:1px;transition:all .2s;color:var(--text-dim);font-weight:600;letter-spacing:1px;font-size:13px;}
+.kb-cat:hover{background:rgba(255,255,255,.03);color:var(--text);}
+.kb-cat.active{background:rgba(232,160,32,.08);border-color:var(--accent-dim);color:var(--accent);}
+.kb-cat .cat-count{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:9px;padding:1px 5px;background:var(--bg3);border-radius:8px;color:var(--text-dim);}
+.article-card{background:var(--panel);border:1px solid var(--border);padding:14px 18px;cursor:pointer;transition:all .2s;position:relative;border-radius:1px;margin-bottom:10px;}
+.article-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);transition:background .2s;}
+.article-card:hover{border-color:var(--border-glow);}
+.article-card:hover::before,.article-card.expanded::before{background:var(--accent);}
+.article-card.expanded{border-color:var(--border-glow);}
+.article-title{font-size:15px;font-weight:700;color:var(--text-bright);margin-bottom:3px;}
+.article-meta{display:flex;gap:10px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;}
+.article-preview{font-size:12px;color:var(--text-dim);line-height:1.5;}
+.article-body{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
+.article-card.expanded .article-body{display:block;}
+.article-tag{padding:1px 7px;border-radius:1px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(41,128,185,.12);color:var(--blue-light);border:1px solid rgba(41,128,185,.3);white-space:nowrap;margin-left:auto;}
+
+/* EVENTS */
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.day-col{display:flex;flex-direction:column;}
+.day-header{background:var(--bg3);border:1px solid var(--border);border-bottom:none;padding:7px 4px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;}
+.day-header.today{color:var(--accent);background:rgba(232,160,32,.08);border-color:var(--accent-dim);}
+.day-events{min-height:100px;background:var(--panel);border:1px solid var(--border);padding:5px;display:flex;flex-direction:column;gap:3px;}
+.event-chip{padding:3px 5px;border-radius:1px;font-size:10px;font-weight:600;cursor:default;border-left:2px solid;}
+.event-chip.battle{background:rgba(192,57,43,.15);border-color:var(--red-glow);color:#e07070;}
+.event-chip.alliance{background:rgba(232,160,32,.12);border-color:var(--accent);color:var(--accent);}
+.event-chip.research{background:rgba(41,128,185,.12);border-color:var(--blue-light);color:var(--blue-light);}
+.event-chip.build{background:rgba(39,174,96,.12);border-color:var(--green-glow);color:var(--green-glow);}
+.event-chip.gather{background:rgba(142,68,173,.12);border-color:#9b59b6;color:#9b59b6;}
+.event-chip.train{background:rgba(230,126,34,.12);border-color:var(--orange);color:var(--orange);}
+.event-chip.zombie{background:rgba(39,174,96,.12);border-color:#27ae60;color:#2ecc71;}
+.event-row{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--border);padding:10px 14px;border-radius:1px;position:relative;margin-bottom:8px;}
+.event-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.event-row.battle::before{background:var(--red-glow);}
+.event-row.alliance::before{background:var(--accent);}
+.event-row.research::before{background:var(--blue-light);}
+.event-row.build::before{background:var(--green-glow);}
+.event-row.gather::before{background:#9b59b6;}
+.event-row.train::before{background:var(--orange);}
+.event-row.zombie::before{background:var(--green-glow);}
+.event-day-badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);white-space:nowrap;letter-spacing:1px;}
+.event-info{flex:1;}
+.event-name{font-weight:700;color:var(--text-bright);font-size:14px;margin-bottom:2px;}
+.event-desc{font-size:11px;color:var(--text-dim);line-height:1.5;}
+.event-time{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:3px;}
+
+/* ROLES */
+.roles-layout{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;}
+@media(max-width:1000px){.roles-layout{grid-template-columns:1fr;}}
+.role-card{background:var(--panel);border:1px solid var(--border);padding:12px 14px;border-radius:1px;position:relative;margin-bottom:8px;}
+.role-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.role-r5::before{background:var(--accent);}
+.role-r4::before{background:var(--blue-light);}
+.role-r3::before{background:var(--green-glow);}
+.role-r2::before{background:var(--text-dim);}
+.role-r1::before{background:var(--red-glow);}
+.role-header{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.role-name{font-size:15px;font-weight:700;color:var(--text-bright);}
+.role-desc{font-size:11px;color:var(--text-dim);line-height:1.5;}
+.role-perms{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+.perm-chip{padding:1px 7px;font-family:'Share Tech Mono',monospace;font-size:9px;border-radius:1px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);}
+.assign-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(30,51,72,.4);transition:background .15s;}
+.assign-row:hover{background:rgba(232,160,32,.03);}
+.assign-name{flex:1;font-weight:700;color:var(--text-bright);font-size:13px;}
+.assign-current{min-width:90px;}
+.role-select{width:100%;padding:5px 9px;font-size:11px;}
+
+/* TRAIN TRACKER */
+.train-grid{display:grid;grid-template-columns:140px repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:2px;overflow:hidden;margin-bottom:16px;}
+.train-cell{background:var(--panel);padding:9px 10px;font-size:12px;}
+.train-cell.header{background:var(--bg3);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent);text-transform:uppercase;text-align:center;}
+.train-cell.week-label{background:var(--panel2);font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);display:flex;flex-direction:column;gap:2px;}
+.train-cell.conductor{background:var(--panel);}
+.train-cell.vip{background:rgba(232,160,32,.04);}
+.train-conductor-name{color:var(--text-bright);font-weight:600;}
+.train-vip-name{color:var(--accent);font-size:11px;}
+.train-empty{color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:10px;}
+
+/* DS/CS */
+.ds-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.ds-layout{grid-template-columns:1fr;}}
+.ds-stage{background:var(--bg3);border:1px solid var(--border-glow);padding:7px 12px;margin-bottom:2px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;}
+.ds-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(30,51,72,.3);align-items:center;}
+.ds-row:hover{background:rgba(255,255,255,.02);}
+.ds-structure{font-size:12px;color:var(--text);}
+.ds-lead{font-weight:700;color:var(--text-bright);font-size:12px;}
+.ds-player{font-size:11px;color:var(--text-dim);}
+
+/* KILL TEAM */
+.kill-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+@media(max-width:900px){.kill-grid{grid-template-columns:1fr 1fr;}}
+.kill-card{background:var(--panel);border:1px solid var(--border);padding:12px 14px;border-radius:1px;position:relative;transition:border-color .2s;}
+.kill-card:hover{border-color:var(--border-glow);}
+.kill-rank{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:3px;}
+.kill-name{font-size:15px;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
+.kill-power{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent);}
+.kill-type-bar{position:absolute;top:0;left:0;right:0;height:2px;}
+.kill-type-bar.tank{background:var(--blue-light);}
+.kill-type-bar.air{background:var(--purple-light);}
+.kill-type-bar.mix{background:var(--accent);}
+
+/* COMMS */
+.comm-card{background:var(--panel);border:1px solid var(--border);padding:14px 18px;border-radius:1px;margin-bottom:10px;position:relative;}
+.comm-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue-light);}
+.comm-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.comm-category{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;background:rgba(41,128,185,.12);color:var(--blue-light);border:1px solid rgba(41,128,185,.3);border-radius:1px;}
+.comm-topic{font-size:14px;font-weight:700;color:var(--text-bright);}
+.comm-sender{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);}
+.comm-when{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);}
+.comm-body{font-size:12px;line-height:1.7;color:var(--text);white-space:pre-wrap;display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.comm-card.expanded .comm-body{display:block;}
+.comm-preview{font-size:11px;color:var(--text-dim);line-height:1.5;cursor:pointer;}
+
+/* NOTES */
+.notes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:800px){.notes-grid{grid-template-columns:1fr;}}
+.note-card{background:var(--panel);border:1px solid var(--border);padding:12px 16px;border-radius:1px;border-left:3px solid var(--accent-dim);}
+.note-text{font-size:13px;line-height:1.7;color:var(--text);}
+
+/* R4 ROLES SPECIFIC */
+.r4-card{background:var(--panel);border:1px solid var(--border);padding:14px 18px;border-radius:1px;margin-bottom:10px;position:relative;}
+.r4-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue-light);}
+.r4-role-name{font-size:16px;font-weight:700;color:var(--text-bright);margin-bottom:4px;}
+.r4-desc{font-size:12px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;}
+.r4-todos{font-size:12px;color:var(--text);line-height:1.8;white-space:pre-wrap;display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.r4-card.expanded .r4-todos{display:block;}
+
+/* MISC */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:3px;}
+.flex{display:flex;}.gap-8{gap:8px;}.mt-16{margin-top:16px;}.mt-10{margin-top:10px;}
+.text-dim{color:var(--text-dim);font-size:11px;}
+.empty-state{text-align:center;padding:40px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+.section-note{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--accent-dim);letter-spacing:1px;padding:6px 10px;background:rgba(232,160,32,.05);border:1px solid rgba(232,160,32,.15);border-radius:1px;margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">SYNCING DUCK ALLIANCE DATA...</div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo-block">
+    <div class="logo-icon">&#129414;</div>
+    <div>
+      <div class="logo-text">DUCK <span>ALLIANCE</span></div>
+      <div class="logo-sub">R4/R5 COMMAND CENTER</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showSection('roster',this)">&#128101; ROSTER</button>
+    <button class="nav-btn" onclick="showSection('kilteam',this)">&#128481; KILL TEAM</button>
+    <button class="nav-btn" onclick="showSection('events',this)">&#128197; EVENTS</button>
+    <button class="nav-btn" onclick="showSection('train',this)">&#128642; TRAIN</button>
+    <button class="nav-btn" onclick="showSection('ds',this)">&#127944; DS/CS</button>
+    <button class="nav-btn" onclick="showSection('r4roles',this)">&#11088; R4 ROLES</button>
+    <button class="nav-btn" onclick="showSection('intel',this)">&#128218; INTEL</button>
+    <button class="nav-btn" onclick="showSection('comms',this)">&#128172; COMMS</button>
+    <button class="nav-btn" onclick="showSection('notes',this)">&#128203; NOTES</button>
+  </nav>
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <div class="status-text">LIVE</div>
+  </div>
+</div>
+
+<!-- =================== ROSTER =================== -->
+<div class="section active" id="section-roster">
+  <div class="section-header">
+    <div><div class="section-title">ALLIANCE <span>ROSTER</span></div><div class="section-sub">// MEMBER REGISTRY &amp; STATS — LIVE SYNC</div></div>
+    <button class="btn btn-primary" onclick="openAddMemberModal()">+ ADD MEMBER</button>
+  </div>
+  <div class="stat-cards">
+    <div class="stat-card"><div class="stat-card-label">Total Members</div><div class="stat-card-value" id="sc-total">—</div><div class="stat-card-sub">Alliance capacity</div></div>
+    <div class="stat-card"><div class="stat-card-label">Keep (Noted)</div><div class="stat-card-value" id="sc-keep">—</div><div class="stat-card-sub">Recommended retain</div></div>
+    <div class="stat-card"><div class="stat-card-label">Flag to Kick</div><div class="stat-card-value" id="sc-kick">—</div><div class="stat-card-sub">Marked for removal</div></div>
+    <div class="stat-card"><div class="stat-card-label">R4 Officers</div><div class="stat-card-value" id="sc-r4">—</div><div class="stat-card-sub">Current R4s</div></div>
+    <div class="stat-card"><div class="stat-card-label">Avg Prof Level</div><div class="stat-card-value" id="sc-prof">—</div><div class="stat-card-sub">Alliance avg</div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search-box"><span>&#128269;</span><input type="text" id="member-search" placeholder="SEARCH MEMBERS..." oninput="renderMembers()"></div>
+    <span class="sort-label">SORT:</span>
+    <select id="sort-col" onchange="renderMembers()" style="width:auto">
+      <option value="name">Name</option>
+      <option value="hqlevel">HQ Level</option>
+      <option value="kills">Kills</option>
+      <option value="prof">Prof Level</option>
+      <option value="heropower">Hero Power</option>
+      <option value="role">Role</option>
+    </select>
+    <select id="sort-dir" onchange="renderMembers()" style="width:auto">
+      <option value="desc">&#8595; Desc</option><option value="asc">&#8593; Asc</option>
+    </select>
+    <select id="filter-status" onchange="renderMembers()" style="width:auto">
+      <option value="all">All Members</option>
+      <option value="keep">Keep (noted)</option>
+      <option value="kick">Flag to kick</option>
+    </select>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">// MEMBER DATABASE</span><span id="member-count" class="text-dim"></span></div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th onclick="setSortBy('name')">PLAYER</th>
+        <th onclick="setSortBy('hqlevel')">HQ</th>
+        <th onclick="setSortBy('role')">ROLE</th>
+        <th onclick="setSortBy('kills')">KILLS</th>
+        <th onclick="setSortBy('prof')">PROF LVL</th>
+        <th onclick="setSortBy('heropower')">HERO PWR</th>
+        <th>STATUS</th>
+        <th>SQUAD TYPE</th>
+        <th>NOTES</th>
+        <th>ACTIONS</th>
+      </tr></thead>
+      <tbody id="members-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- =================== KILL TEAM =================== -->
+<div class="section" id="section-kilteam">
+  <div class="section-header">
+    <div><div class="section-title">KILL <span>TEAM</span></div><div class="section-sub">// RANKED BY SQUAD POWER — FROM MAP SHEET</div></div>
+    <button class="btn btn-primary" onclick="openAddKillModal()">+ ADD PLAYER</button>
+  </div>
+  <div class="section-note">&#9888; Kill Team ranking sourced from MAP sheet. Squad power in MM.</div>
+  <div class="kill-grid" id="kill-grid"></div>
+</div>
+
+<!-- =================== EVENTS =================== -->
+<div class="section" id="section-events">
+  <div class="section-header">
+    <div><div class="section-title">WEEKLY <span>OPERATIONS</span></div><div class="section-sub">// EVENT SCHEDULE &amp; WEEKLY PLANNER</div></div>
+    <button class="btn btn-primary" onclick="openAddEventModal()">+ ADD EVENT</button>
+  </div>
+  <div class="two-col" style="margin-bottom:20px">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// WEEKLY PLANNER (WK OF MAR 20)</span></div>
+      <div style="padding:10px">
+        <div id="weekly-planner-grid"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// DAILY VS FOCUS</span></div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:6px;" id="vs-focus"></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:20px">
+    <div class="panel-header"><span class="panel-title">// WEEKLY CALENDAR</span></div>
+    <div style="padding:10px"><div class="week-grid" id="week-grid"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">// ALL SCHEDULED EVENTS</span></div>
+    <div style="padding:10px" id="event-list"></div>
+  </div>
+</div>
+
+<!-- =================== TRAIN TRACKER =================== -->
+<div class="section" id="section-train">
+  <div class="section-header">
+    <div><div class="section-title">TRAIN <span>TRACKER</span></div><div class="section-sub">// CONDUCTOR SCHEDULE &amp; VIP ASSIGNMENTS</div></div>
+  </div>
+  <div class="two-col" style="margin-bottom:16px">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// DAILY TRAIN SCHEDULE TYPE</span></div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:5px;">
+        <div class="assign-row"><div class="assign-name">Sunday</div><div class="text-dim mono">Mon–Sat Most Tech Donations (R3 only)</div></div>
+        <div class="assign-row"><div class="assign-name">Monday</div><div class="text-dim mono">Weekly Alliance MVP (R3 only)</div></div>
+        <div class="assign-row"><div class="assign-name">Tuesday</div><div class="text-dim mono">R3 Dice Roll</div></div>
+        <div class="assign-row"><div class="assign-name">Wednesday</div><div class="text-dim mono">Hour of Need (Railmaster discretion)</div></div>
+        <div class="assign-row"><div class="assign-name">Thursday</div><div class="text-dim mono">R3 Dice Roll (Secret Password or standard)</div></div>
+        <div class="assign-row"><div class="assign-name">Friday</div><div class="text-dim mono">R4 Appreciation (R3 VIP)</div></div>
+        <div class="assign-row"><div class="assign-name">Saturday</div><div class="text-dim mono">Buster Day MVP (R3 only)</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// TRAIN RULES</span></div>
+      <div style="padding:12px;font-size:12px;line-height:1.9;color:var(--text);">
+        Train distribution within 1hr after reset each day.<br>
+        5-minute warning given before distribution — must be online to refresh to gold.<br>
+        <span style="color:var(--accent);font-weight:700;">No player can be conductor more than once in 14 days.</span><br>
+        If qualifying again within that window, train rolls to next eligible player.<br>
+        All dice rolls managed by the Railmaster. No rigging.
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><span class="panel-title">// CONDUCTOR SCHEDULE</span></div>
+    <div style="overflow-x:auto">
+      <div class="train-grid" id="train-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== DS/CS =================== -->
+<div class="section" id="section-ds">
+  <div class="section-header">
+    <div><div class="section-title">DESERT &amp; CANYON <span>STORM</span></div><div class="section-sub">// TEAM ASSIGNMENTS &amp; ENROLLMENT</div></div>
+  </div>
+  <div class="ds-layout">
+    <div>
+      <div class="panel-header" style="margin-bottom:8px;background:var(--panel);border:1px solid var(--border);border-radius:1px;"><span class="panel-title">&#127944; DESERT STORM — TEAM A</span></div>
+      <div class="panel" id="ds-team-a"></div>
+    </div>
+    <div>
+      <div class="panel-header" style="margin-bottom:8px;background:var(--panel);border:1px solid var(--border);border-radius:1px;"><span class="panel-title">&#127944; DESERT STORM — TEAM B</span></div>
+      <div class="panel" id="ds-team-b"></div>
+    </div>
+  </div>
+  <div class="ds-layout mt-16">
+    <div>
+      <div class="panel-header" style="margin-bottom:8px;background:var(--panel);border:1px solid var(--border);border-radius:1px;"><span class="panel-title">&#127957; CANYON STORM — TEAM A</span></div>
+      <div class="panel" id="cs-team-a"></div>
+    </div>
+    <div>
+      <div class="panel-header" style="margin-bottom:8px;background:var(--panel);border:1px solid var(--border);border-radius:1px;"><span class="panel-title">&#127957; CANYON STORM — TEAM B</span></div>
+      <div class="panel" id="cs-team-b"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== R4 ROLES =================== -->
+<div class="section" id="section-r4roles">
+  <div class="section-header">
+    <div><div class="section-title">R4 <span>ROLES</span></div><div class="section-sub">// LEADERSHIP STRUCTURE &amp; RESPONSIBILITIES</div></div>
+  </div>
+  <div class="section-note">&#128221; Proposed role structure — sourced from alliance planning sheet. Assignments TBD.</div>
+  <div class="roles-layout">
+    <div id="r4-role-list"></div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">// ROLE ASSIGNMENTS (ROSTER)</span>
+        <button class="btn btn-sm btn-primary" onclick="saveRoles()">&#128190; SAVE ALL</button></div>
+      <div id="role-assignments"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== INTEL =================== -->
+<div class="section" id="section-intel">
+  <div class="section-header">
+    <div><div class="section-title">ALLIANCE <span>INTEL</span></div><div class="section-sub">// KNOWLEDGE BASE &amp; STRATEGY ARCHIVE</div></div>
+    <button class="btn btn-primary" onclick="toggleAddArticle()">+ NEW ENTRY</button>
+  </div>
+  <div class="add-form" id="add-article-form">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">TITLE</label><input type="text" id="art-title" placeholder="Article title..."></div>
+      <div class="form-group"><label class="form-label">CATEGORY</label>
+        <select id="art-cat"><option value="Strategy">Strategy</option><option value="Building">Building</option>
+          <option value="Research">Research</option><option value="Events">Events</option>
+          <option value="Recruitment">Recruitment</option><option value="Rules">Rules</option><option value="VS Guide">VS Guide</option></select></div>
+      <div class="form-group"><label class="form-label">AUTHOR</label><input type="text" id="art-author" placeholder="Commander name..."></div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px"><label class="form-label">CONTENT</label>
+      <textarea id="art-content" rows="4" style="width:100%"></textarea></div>
+    <div class="flex gap-8">
+      <button class="btn btn-primary" onclick="saveArticle()">SAVE</button>
+      <button class="btn" onclick="toggleAddArticle()">CANCEL</button>
+    </div>
+  </div>
+  <div class="knowledge-layout mt-16">
+    <div class="panel"><div class="panel-header"><span class="panel-title">// CATEGORIES</span></div>
+      <div style="padding:8px" id="kb-categories"></div></div>
+    <div id="kb-articles"></div>
+  </div>
+</div>
+
+<!-- =================== COMMS =================== -->
+<div class="section" id="section-comms">
+  <div class="section-header">
+    <div><div class="section-title">COMMS <span>TEMPLATES</span></div><div class="section-sub">// DAILY REMINDERS &amp; ALLIANCE EMAILS</div></div>
+  </div>
+  <div class="section-note">&#128172; Click any template to expand the full message. Copy and send in-game.</div>
+  <div id="comms-list"></div>
+</div>
+
+<!-- =================== NOTES =================== -->
+<div class="section" id="section-notes">
+  <div class="section-header">
+    <div><div class="section-title">LEADERSHIP <span>NOTES</span></div><div class="section-sub">// INTEL &amp; OBSERVATIONS</div></div>
+    <button class="btn btn-primary" onclick="openAddNoteModal()">+ ADD NOTE</button>
+  </div>
+  <div class="notes-grid" id="notes-grid"></div>
+</div>
+
+<!-- MODAL: ADD MEMBER -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">ADD COMMANDER</span><button class="modal-close" onclick="closeModal('modal-member')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">PLAYER NAME *</label><input type="text" id="m-name" placeholder="In-game name"></div>
+        <div class="form-group"><label class="form-label">HQ LEVEL</label><input type="number" id="m-hq" placeholder="e.g. 33" min="1" max="40"></div>
+        <div class="form-group"><label class="form-label">KILLS</label><input type="text" id="m-kills" placeholder="e.g. 2.4 or 648K"></div>
+        <div class="form-group"><label class="form-label">CURRENT ROLE</label><input type="text" id="m-role" placeholder="e.g. R4"></div>
+        <div class="form-group"><label class="form-label">PROF LEVEL</label><input type="number" id="m-prof" placeholder="0-100" min="0" max="100"></div>
+        <div class="form-group"><label class="form-label">HERO POWER (MM)</label><input type="number" id="m-heropower" placeholder="e.g. 141"></div>
+        <div class="form-group"><label class="form-label">SQUAD TYPE</label>
+          <select id="m-squadtype"><option value="">Unknown</option><option value="Tank">Tank</option><option value="Air">Air</option><option value="Missile">Missile</option><option value="Mix">Mix</option></select></div>
+        <div class="form-group"><label class="form-label">STATUS</label>
+          <select id="m-status"><option value="keep">Keep</option><option value="watch">Watch</option><option value="kick">Flag to Kick</option></select></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">SEAT COLOR</label>
+          <select id="m-seat"><option value="">TBD</option><option value="Purple">Purple</option><option value="Blue">Blue</option><option value="Red">Red</option><option value="Green">Green</option><option value="Yellow">Yellow</option><option value="Orange">Orange</option></select></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">SPECIAL NOTES</label>
+          <textarea id="m-notes" rows="2" style="width:100%" placeholder="Notes..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-member')">CANCEL</button><button class="btn btn-primary" onclick="saveMember()">ADD</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT MEMBER -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">EDIT COMMANDER</span><button class="modal-close" onclick="closeModal('modal-edit')">&#10005;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-doc-id">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">PLAYER NAME *</label><input type="text" id="e-name"></div>
+        <div class="form-group"><label class="form-label">HQ LEVEL</label><input type="number" id="e-hq" min="1" max="40"></div>
+        <div class="form-group"><label class="form-label">KILLS</label><input type="text" id="e-kills"></div>
+        <div class="form-group"><label class="form-label">CURRENT ROLE</label><input type="text" id="e-role"></div>
+        <div class="form-group"><label class="form-label">PROF LEVEL</label><input type="number" id="e-prof" min="0" max="100"></div>
+        <div class="form-group"><label class="form-label">HERO POWER (MM)</label><input type="number" id="e-heropower"></div>
+        <div class="form-group"><label class="form-label">SQUAD TYPE</label>
+          <select id="e-squadtype"><option value="">Unknown</option><option value="Tank">Tank</option><option value="Air">Air</option><option value="Missile">Missile</option><option value="Mix">Mix</option></select></div>
+        <div class="form-group"><label class="form-label">STATUS</label>
+          <select id="e-status"><option value="keep">Keep</option><option value="watch">Watch</option><option value="kick">Flag to Kick</option></select></div>
+        <div class="form-group"><label class="form-label">SEAT COLOR</label>
+          <select id="e-seat"><option value="">TBD</option><option value="Purple">Purple</option><option value="Blue">Blue</option><option value="Red">Red</option><option value="Green">Green</option><option value="Yellow">Yellow</option><option value="Orange">Orange</option></select></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">SPECIAL NOTES</label>
+          <textarea id="e-notes" rows="2" style="width:100%"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteMember()">REMOVE</button>
+      <button class="btn" onclick="closeModal('modal-edit')">CANCEL</button>
+      <button class="btn btn-primary" onclick="updateMember()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD EVENT -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">ADD EVENT</span><button class="modal-close" onclick="closeModal('modal-event')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">EVENT NAME *</label><input type="text" id="ev-name" placeholder="Event name..."></div>
+        <div class="form-group"><label class="form-label">TYPE</label>
+          <select id="ev-type"><option value="battle">Battle/PvP</option><option value="alliance">Alliance Event</option>
+            <option value="research">Research</option><option value="build">Build Day</option>
+            <option value="gather">Gathering</option><option value="train">Train</option><option value="zombie">Zombie/MG</option></select></div>
+        <div class="form-group"><label class="form-label">DAY</label>
+          <select id="ev-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option>
+            <option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></div>
+        <div class="form-group"><label class="form-label">TIME (server)</label><input type="text" id="ev-time" placeholder="e.g. 1hr before reset"></div>
+        <div class="form-group" style="grid-column:1/-1"><label class="form-label">NOTES</label>
+          <textarea id="ev-notes" rows="2" style="width:100%"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-event')">CANCEL</button><button class="btn btn-primary" onclick="saveEvent()">ADD</button></div>
+  </div>
+</div>
+
+<!-- MODAL: ADD KILL TEAM -->
+<div class="modal-overlay" id="modal-kill">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">ADD TO KILL TEAM</span><button class="modal-close" onclick="closeModal('modal-kill')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">PLAYER NAME *</label><input type="text" id="k-name" placeholder="Player name"></div>
+        <div class="form-group"><label class="form-label">SQUAD POWER (MM)</label><input type="number" id="k-power" placeholder="e.g. 44.2" step="0.1"></div>
+        <div class="form-group"><label class="form-label">SQUAD TYPE</label>
+          <select id="k-type"><option value="Tank">Tank</option><option value="Air">Air</option><option value="Missile">Missile</option><option value="Mix">Mix</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-kill')">CANCEL</button><button class="btn btn-primary" onclick="saveKillPlayer()">ADD</button></div>
+  </div>
+</div>
+
+<!-- MODAL: ADD NOTE -->
+<div class="modal-overlay" id="modal-note">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">ADD NOTE</span><button class="modal-close" onclick="closeModal('modal-note')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:10px"><label class="form-label">NOTE</label>
+        <textarea id="note-text" rows="4" style="width:100%" placeholder="Leadership intelligence note..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-note')">CANCEL</button><button class="btn btn-primary" onclick="saveNote()">SAVE</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBrqg4oFP7yOlOGAIvGGRlHFCOyhSZsn5s",
+  authDomain: "ducklw.firebaseapp.com",
+  databaseURL: "https://ducklw-default-rtdb.firebaseio.com",
+  projectId: "ducklw",
+  storageBucket: "ducklw.firebasestorage.app",
+  messagingSenderId: "83150597309",
+  appId: "1:83150597309:web:46961b4f7bdc7cc5dd1bd4"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+let members=[], articles=[], events=[], killTeam=[], notes=[];
+let currentKbCat='All', sortCol='name', sortDir='asc';
+let loaded={members:false,articles:false,events:false,kill:false,notes:false};
+
+const loading = document.getElementById('loading-overlay');
+function checkLoaded(){ if(Object.values(loaded).every(v=>v)) loading.classList.add('hidden'); }
+
+// ===== LISTENERS =====
+onSnapshot(query(collection(db,'members'),orderBy('name')), s=>{
+  members=s.docs.map(d=>({_id:d.id,...d.data()})); renderMembers(); renderRoles();
+  loaded.members=true; checkLoaded();
+}, ()=>{ loaded.members=true; checkLoaded(); });
+
+onSnapshot(query(collection(db,'articles'),orderBy('date','desc')), s=>{
+  articles=s.docs.map(d=>({_id:d.id,...d.data()})); renderKnowledge();
+  loaded.articles=true; checkLoaded();
+}, ()=>{ loaded.articles=true; checkLoaded(); });
+
+onSnapshot(query(collection(db,'events'),orderBy('day')), s=>{
+  events=s.docs.map(d=>({_id:d.id,...d.data()})); renderEvents();
+  loaded.events=true; checkLoaded();
+}, ()=>{ loaded.events=true; checkLoaded(); });
+
+onSnapshot(query(collection(db,'killteam'),orderBy('power','desc')), s=>{
+  killTeam=s.docs.map(d=>({_id:d.id,...d.data()})); renderKillTeam();
+  loaded.kill=true; checkLoaded();
+}, ()=>{ loaded.kill=true; checkLoaded(); });
+
+onSnapshot(query(collection(db,'notes'),orderBy('addedAt','desc')), s=>{
+  notes=s.docs.map(d=>({_id:d.id,...d.data()})); renderNotes();
+  loaded.notes=true; checkLoaded();
+}, ()=>{ loaded.notes=true; checkLoaded(); });
+
+// ===== STATIC DATA (from spreadsheet) =====
+const dsTeamA = [
+  {stage:'Stage 1',role:'Float Attack',lead:'Boogie',player:'Yaba',sub:'Tailless (sub)'},
+  {stage:'Stage 1',role:'Info Center (10% boost)',lead:'Zoom',player:'Gomez',sub:'Cheeps (sub)'},
+  {stage:'Stage 1',role:'Science Hub (reduced TP)',lead:'Mokie',player:'Mocan',sub:''},
+  {stage:'Stage 1',role:'Oil Refinery I',lead:'Maria',player:'Vanger8',sub:'Hog Headz (sub)'},
+  {stage:'Stage 1',role:'Oil Refinery II',lead:'Jack',player:'Taka',sub:'Burnt Cod (sub)'},
+  {stage:'Stage 1',role:'Hospital I',lead:'VCop',player:'Johnnyboii',sub:'Hoosier (sub)'},
+  {stage:'Stage 1',role:'Hospital II',lead:'Criggins',player:'Cyco',sub:'Pikininha (sub)'},
+  {stage:'Stage 1',role:'Hospital III',lead:'AnAk Betawie',player:'DaveMon',sub:'GermanVermin (sub)'},
+  {stage:'Stage 1',role:'Hospital IV',lead:'PizzNuke',player:'ZekromSRT',sub:''},
+  {stage:'Stage 2',role:'Silo (highest pts)',lead:'Pizznuke',player:'Yaba',sub:'Pikininha (sub)'},
+  {stage:'Stage 2',role:'Arsenal (buffs heroes +15%)',lead:'Boogie',player:'ZekromSRT',sub:''},
+  {stage:'Stage 2',role:'Merc Factory (debuffs -15%)',lead:'Hoosier (sub)',player:'GermanVermin (sub)',sub:''},
+];
+const dsTeamB = [
+  {stage:'Stage 1',role:'Float Attack',lead:'Creed',player:'Munk (sub)',sub:''},
+  {stage:'Stage 1',role:'Info Center (10% boost)',lead:'DJspicypants',player:'Mik3lin',sub:''},
+  {stage:'Stage 1',role:'Science Hub (reduced TP)',lead:'Bubble Girl',player:'Escarch25',sub:''},
+  {stage:'Stage 1',role:'Oil Refinery I',lead:'RailDawg',player:'Dafiduk',sub:'Mando'},
+  {stage:'Stage 1',role:'Oil Refinery II',lead:'Viper',player:'Carlissaa',sub:''},
+  {stage:'Stage 1',role:'Hospital I',lead:'Skandalo666',player:'Solenya C137',sub:'Alevict'},
+  {stage:'Stage 1',role:'Hospital II',lead:'Humacoide',player:'Manguni one',sub:'cha yunhu (sub)'},
+  {stage:'Stage 1',role:'Hospital III',lead:'Karasu Kage',player:'EmberPetjah (sub)',sub:'Ep0y (sub)'},
+  {stage:'Stage 1',role:'Hospital IV',lead:'Cobra',player:'L Ange du Mort',sub:''},
+  {stage:'Stage 2',role:'Silo (highest pts)',lead:'Creed',player:'Skandalo',sub:'Cobra & Munk (sub)'},
+  {stage:'Stage 2',role:'Arsenal (buffs heroes +15%)',lead:'DJspicypants',player:'RailDawg',sub:''},
+  {stage:'Stage 2',role:'Merc Factory (debuffs -15%)',lead:'Bubble Girl',player:'Manguni one',sub:''},
+];
+const csEnrollA = ['Dafiduk','Squintypizz','Jack Bristow','The Vic','Luis Angel','Zoom','Taka','Mokie','Cyco','Gomez (pending)','Criggins','Mocanlucu','ninja gaiden','MyMaria','Cheeps is Bone','Hoosier Fan (pending)','Vanger8','LAnge du Mort','—','Tailles Pizz (pending)'];
+const csEnrollB = ['RailDawg','Creed','Manguni one','DJSpicypants','Cobra','Johnnybioi','Skandalo','Draven Shadow','Bubblegirl','DaveMon (pending)','Persevera','Escarch25','Mik3lin','Pikininha','RustyRimJ (pending)','12Seahawks (pending)','Ducking around (pending)','Viper','anak Betawie','Ep0y (pending)'];
+
+const r4Roles = [
+  {emoji:'👑',title:'R5',desc:'The R5 serves as the strategic leader and steward of the Duck alliance — guides long-term direction, maintains stability, and empowers the leadership team to execute.',todos:`🟢 Lead weekly Sunday leadership meeting\n🟢 Appoint and support R4 leadership roles\n🟢 Represent Duck in diplomacy with other alliances\n🟢 Final call when leadership consensus cannot be reached`},
+  {emoji:'⚔️',title:'Warlord',desc:'War strategy and battlefield coordination. Leads alliance during conflict, ensuring we fight as a coordinated unit.',todos:`🟢 Communicate and plan tactics with R4 leadership and allies\n🟢 Send battle tactics in advance of all war events\n🟢 Coordinate tactics training or dry run exercises\n🟢 Send post-battle email with recognition and improvement areas\n🔴 Define war strategy during server conflict events\n🔴 Call rallies and coordinate timed attacks`},
+  {emoji:'🎭',title:'Muse',desc:'Culture, morale, and community. The Muse keeps the spirit of Duck alive.',todos:`🟢 Prep agenda for weekly Sunday leadership meeting\n🟢 Send Weekly "This Week In The Pond" Alliance Email every Sunday\n🟢 Send Daily "What to focus on today" quick announcement\n🔴 Maintain alliance culture and humor\n🔴 Welcome new members and help them integrate\n🔴 Post morale boosters, memes, or fun content`},
+  {emoji:'🪶',title:'Recruiter',desc:'Talent acquisition and alliance growth. Ensures we are always proactively growing.',todos:`🟢 Update R4 leadership weekly on inactive players\n🟢 Identify and connect with 5 hipo recruits each week via DM\n🟢 Post recruiting link to WC regularly\n🟢 Send welcome message to all new Ducks\n🔴 Identify and recruit strong or active players\n🔴 Screen incoming applicants\n🔴 Monitor alliance activity levels (flag inactives)`},
+  {emoji:'🫖',title:'Butler',desc:'Operations and logistics. Keeps the alliance running smoothly behind the scenes.',todos:`🟢 Manage Alliance Roster spreadsheet\n🟢 Default Train Captain\n🟢 Default Seasonal Rewards Captain\n🟢 Manage periodic events (Glacieradon, Sky Predator, etc.)\n🔴 Help coordinate event reminders\n🔴 Monitor alliance tech or contribution reminders`},
+  {emoji:'🚂',title:'Train Captain',desc:'Responsible for defining train schedules and launching the daily train.',todos:`🟢 Launch train daily with an online conductor\n🟢 Point of contact on all alliance train questions\n🟢 Keep ongoing spreadsheet of train conductors and VIP guests\n🔴 Schedule daily train\n🔴 Communicate train instructions in alliance chat\n🔴 Adjust schedules based on server activity or war needs`},
+  {emoji:'💡',title:'Seasonal Strategist',desc:'Leads in-season strategy and scheduling of seasonal events for the alliance.',todos:`🟢 Lead communication and planning for in-season events\n🟢 Primary contact on all intraserver planning chats\n🟢 Partner closely with Warlord on tactics training\n🟢 Plan and communicate seasonal calendar of events`},
+  {emoji:'💡',title:'Seasonal Rewards Captain',desc:'Responsible for leading seasonal award distributions for the alliance.',todos:`🟢 Manage loot distribution within season\n🟢 Lead end of season rewards conversation with R4 leadership\n🟢 Manage distribution of end of season rewards`},
+  {emoji:'💡',title:'Seasonal Resistance Leader',desc:'Responsible for developing accelerated individual resistance levels early for the benefit of all alliance members.',todos:`🟢 Maximize early resistance levels through all available channels\n🟢 Proactively support first blood "gump" DE rallies\n🟢 Lead land and stronghold capture rallies\n🟢 Receive first priority on seasonal rss tiles when online`},
+  {emoji:'🔥',title:'Tip Captain',desc:'Responsible for "Duck Continuing Education".',todos:`🟢 Create/source game tip infographics for alliance\n🟢 Partner with leaders on strategy for War, VS, Squad, Events\n🟢 Send "Tip of the Day" communications regularly`},
+  {emoji:'🌪',title:'DS/CS Registration Manager',desc:'Responsible for Desert and Canyon Storm player registration.',todos:`🟢 Send out weekly alliance event registration reminder/poll\n🟢 Assign Team A and Team B participants, balancing power\n🔴 Manage CS/DS registration and sign-ups\n🔴 Assign registered players to team A/B\n🔴 Manage registration communications`},
+  {emoji:'🌪',title:'DS Leader (Team A/B)',desc:'Responsible for Desert Storm event communication and player assignments.',todos:`🟢 Determine event strategy and send out weekly player assignments\n🟢 Confirm starter participation and coordinate sub assignments\n🟢 Discord VC lead (if utilized)\n🟢 Send post-battle comms with recognition and improvement areas`},
+  {emoji:'🌪',title:'CS Leader (Team A/B)',desc:'Responsible for Canyon Storm event communication and player assignments.',todos:`🟢 Determine event strategy and send out weekly player assignments\n🟢 Confirm starter participation and coordinate sub assignments\n🟢 Discord VC lead (if utilized)\n🟢 Send post-battle comms with recognition and improvement areas`},
+  {emoji:'⌛',title:'MG Captain',desc:'Responsible for MG schedule and launch.',todos:`🟢 Propose MG schedule every week on Sunday\n🟢 Set MG timer for alliance communication\n🟢 Final say on any MG scheduling changes`},
+  {emoji:'🧟',title:'Zombie Siege Captain',desc:'Responsible for Zombie Siege schedule and launch.',todos:`🟢 Propose Zombie Siege schedule every week on Sunday\n🟢 Set Zombie Siege timer for alliance communication\n🟢 Final say on any Zombie Siege scheduling changes`},
+];
+
+const commsTemplates = [
+  {category:'direct message',topic:'New Player Onboarding',sender:'R4 Recruiter',when:'Upon new player join',
+   body:`Welcome to Duck! So happy you're here! I'll be sending a few quick onboarding notes in the next couple DMs so you know how we do things around here.\n\nIf you have questions at any point, just ask me or any of the R4s — we're happy to help.\n\nDuckisms (How the Pond Works)\n• Everyone matters. We value active players who contribute to both the alliance and the culture.\n• Check announcements daily.\n• Daily Train. We run the train at reset every day. Try to be online to participate.\n• Storm Events. Please sign up each week in the Desert Storm and Canyon Storm tabs.\n\nCore Expectations\n• Run 15/20 rallies daily to help boost alliance gift level\n• Donate 4,000+ tech daily\n• No DE/DW rallies or digs during MG or Zombie Siege\n• Shield during Buster if you are not fighting\n• Move with the hive when the alliance relocates\n• Let an R4 know if you'll be inactive for an extended period\n\nMost Important Rule\nHave fun and don't be a meanie. Welcome to the pond!`},
+  {category:'R4 Email',topic:'Weekly Focus (This Week In Duck)',sender:'R4 Butler or Muse',when:'Sunday midday',
+   body:`Title: This Week In Duck:\n\nThis week at the Pond:\n\nALLIANCE EVENTS (Changes are often necessary so please check announcements and timers)\nTrain launches daily within an hour of reset\n[Add: MG will be on XX days and times]\n[Add: Zombie Siege on XX days and time]\n[Add: Predator XXX]\n[Add: Zombie Invasion/Goldies start Tues night after reset, stockpile stamina!]\nCanyon Storm: 1 hour before reset on Thurs for both Teams (You must sign up via portal/poll)\nDesert Storm: 1 hour before reset on Friday for both Teams (You must sign up via portal/poll)\n\nSEASON/CROSS SERVER EVENTS\n[Add Capitol War if applicable]\n[Add Meteorite War if applicable]\n[Season specific activities]\n\nLet's go Ducks!`},
+  {category:'Announcement',topic:'Monday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Sunday',
+   body:`MONDAY Reminders:\n[EDIT AS APPLICABLE: Train/MG/Zombies after reset]\nSign up for Canyon and Desert Storm\nAll: launch 15 rallies and donate 4000+ to alliance tech every day, collect arena gems\nVS: Keep idle squads gathering. Use drone data, stamina, and drone parts during the AR window to max points. If you have the Instant Gather engineering skill, use it right after reset and again just before the 23.5 hr cooldown ends.`},
+  {category:'Announcement',topic:'Tuesday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Monday',
+   body:`TUESDAY Reminders:\n[EDIT: Train/MG/Zombies/Gold Zombies after reset]\nSign up for Canyon (last day) and Desert Storm!\nAll: launch 20 rallies and donate 4000+ to alliance tech every day, collect arena gems\nVS: Build day. Use the Sec of Dev buff before starting upgrades. Complete builds and use speedups during the AR building window. Survivor recruits, UR secret tasks, and UR truck tasks anytime. Hold radar tasks for Wed.`},
+  {category:'Announcement',topic:'Wednesday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Tuesday',
+   body:`WEDNESDAY Reminders:\n[EDIT: Train/MG/Zombies after reset]\nLast day to sign up for Desert Storm!\nAll: launch 20 rallies and donate 4000+ to alliance tech every day\nVS: Research Day! Use the Sec of Science buff before major tech upgrades. Complete research and use speedups during the AR research window. Valor badges, radar tasks and drone component chests can be opened anytime.`},
+  {category:'Announcement',topic:'Thursday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Wednesday',
+   body:`THURSDAY Reminders:\n[EDIT: Train/MG/Zombies after reset]\nCanyon Storm: Team A/B 1 hour before reset — check your assignments!\nAll: launch 20 rallies and donate 4000+ to alliance tech every day\nVS: Hero day. Use skill medals and hero/EW shards anytime. Use hero recruit tickets and hero EXP during the AR hero window. Run Ghost Ops missions for additional hero resources. Hold radar tasks for Friday.`},
+  {category:'Announcement',topic:'Friday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Thursday',
+   body:`FRIDAY Reminders:\n[EDIT: Train/MG/Zombies after reset]\nDesert Storm: Team A/B 1 hour before reset — check your assignments!\nAll: launch 20 rallies and donate 4000+ to alliance tech every day, collect arena gems\nVS: Total Mobilization. Score through city building, troop training, tech research, and upgrading your gorilla overlord. Use speedups during corresponding AR windows. Use Sec of Defense buff when training or promoting troops. Fill drill grounds ahead of Buster day.`},
+  {category:'Announcement',topic:'Saturday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Friday',
+   body:`SATURDAY Reminders:\n[EDIT: Train/MG/Zombies after reset]\n[EDIT: Reminders on Season/Server Events]\nAll: launch 20 rallies and donate 4000+ to alliance tech every day, collect arena gems\nVS: Buster day. SHIELD IF NOT FIGHTING. Focus on combat — VS points come from enemy troops killed and your troops lost in battle. Participate in PvP and tile hits. Use speedups for troop training, healing, builds, and tech during AR windows.`},
+  {category:'Announcement',topic:'Sunday Daily Reminder',sender:'R4 Muse or Butler',when:'Before reset Saturday',
+   body:`SUNDAY Reminders:\n[EDIT: Train/MG/Zombies after reset]\n[EDIT: Doomsday/Code Bosses/Arena]\nSign up for Canyon and Desert Storm\nAll: launch 20 rallies and donate 4000+ to alliance tech every day, collect arena AND frontline gems\nPrep: Prepare for the next VS cycle. Stack radar tasks so you start Mon w/full capacity. Send squads gathering so tiles finish just after reset. Organize upgrades, resources, and speedups for the correct VS scoring days.`},
+];
+
+const staticNotes = [
+  'Recruiter does a lot of recruiting in and out of server.',
+  'Whales protection they offer while fighting — Lubber and Marten GHST. Marten went to GHST to make server stronger but he and Lubber are still tight.',
+  'Track people hero power in arena scale CS and DS. Minha keeps a spreadsheet.',
+  'Even split between two teams between 2-5 million power — CS and DS.',
+  'Arena ranking total hero power — scale the top 15 people on the team.',
+  'Kaos — Trout looking to transfer.',
+  'Cobi ashed the whole server this last weekend because they lost to TQuak.',
+  'Minha sends out detailed war battle plans to the entire server before every battle in four different languages.',
+];
+
+const trainData = [
+  {week:'2/15/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'Kristi',sat:'Cowboy',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'2/22/26',sun:'Viper',mon:'Persevera',tue:'Zoom',wed:'escarch25',thu:'Panduck Thor',fri:'50daMenace',sat:'Hog Headz',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'3/1/26',sun:'Mik3lin',mon:'Jack',tue:'Bearly',wed:'Mokie',thu:'Lou',fri:'Mnsmarcio',sat:'Betawie (Ken)',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'3/8/26',sun:'Solyena',mon:'Cod',tue:'Skandaloo',wed:'Pizz',thu:'Bubble Girl',fri:'Mocanlucu',sat:'Dafiduk',vipSun:'Mokie (-2x)',vipMon:'Maria (-2x)',vipTue:'Adam (-2x)',vipWed:'Creed (-2x)',vipThu:'DJ (-2x)',vipFri:'Mokie (-2x)',vipSat:'Mokie (-2x)'},
+  {week:'3/15/26',sun:'Cyco',mon:'Yaba',tue:'Karasu/Shadow',wed:'Dreamy',thu:'Dafiduk',fri:'Hog',sat:'—',vipSun:'Mokie (-2x)',vipMon:'Maria (-2x)',vipTue:'Mokie (-2x)',vipWed:'Creed (-2x)',vipThu:'Mokie (-1x)',vipFri:'Zoom (-2x)',vipSat:''},
+  {week:'3/22/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'3/29/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'4/5/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'4/12/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+  {week:'4/19/26',sun:'',mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',vipSun:'',vipMon:'',vipTue:'',vipWed:'',vipThu:'',vipFri:'',vipSat:''},
+];
+
+const weeklyPlanner = [
+  {day:'Sun',events:'MG right after reset'},
+  {day:'Mon',events:'Zombies 30 min before reset'},
+  {day:'Tue',events:'MG 30 min before reset\nZombie Invasion (2hr after reset)'},
+  {day:'Wed',events:'City land grab 1200 server time\nGlaceridon?'},
+  {day:'Thu',events:'Zombies 30 min before reset\nMG at reset'},
+  {day:'Fri',events:'Bust Day and Land Grabs'},
+  {day:'Sat',events:'MG at reset'},
+];
+
+const vsFocus = [
+  {day:'MON',focus:'Drone tasks, gather constantly. Use drone data/stamina/parts during AR window. Use Instant Gather skill right after reset.'},
+  {day:'TUE','focus':'BUILD DAY. Use Sec of Dev buff. Complete builds and use speedups during AR window. Hold radar tasks for Wed.'},
+  {day:'WED','focus':'RESEARCH DAY. Use Sec of Science buff. Valor badges, radar tasks, drone component chests can be opened anytime.'},
+  {day:'THU','focus':'HERO DAY. Use skill medals and hero/EW shards anytime. Use hero recruit tickets and EXP during AR hero window. Ghost Ops.'},
+  {day:'FRI','focus':'Total Mobilization. Builds, troop training, tech, gorilla upgrades. Sec of Defense buff for training. Fill drill grounds for Buster.'},
+  {day:'SAT','focus':'BUSTER DAY. SHIELD IF NOT FIGHTING. PvP and tile hits. Use speedups during AR windows.'},
+  {day:'SUN','focus':'Prep for next VS cycle. Stack radar tasks to full capacity. Send squads gathering so tiles complete just after reset.'},
+];
+
+const staticKillTeam = [
+  {name:'Mokie',power:51,type:'Tank'},{name:'Creed',power:48,type:'Air'},{name:'Maria',power:44.82,type:'Tank'},
+  {name:'Zoom',power:44.2,type:'Tank'},{name:'Munk',power:44.9,type:'Tank'},{name:'Tailless Pizz',power:40.1,type:'Tank'},
+  {name:'Hog Headz',power:40.1,type:''},{name:'Dysme',power:39,type:''},{name:'Humacoide',power:39.62,type:'Tank'},
+  {name:'Hoosier',power:39.1,type:'Air'},{name:'Pizznuke',power:38.9,type:'Tank'},{name:'AnAk Betawie',power:38.8,type:'Tank'},
+  {name:'Skandalo',power:38.8,type:'Mix'},{name:'Bearlyawake',power:38.3,type:'Tank'},{name:'Cobra',power:38,type:'Tank'},
+  {name:'Johnnyboii',power:38,type:''},{name:'DJspicypants',power:37.1,type:'Tank'},{name:'Escarch25',power:37.3,type:'Tank'},
+  {name:'Viper',power:37.2,type:'Tank'},{name:'Criggins',power:36.7,type:'Tank'},{name:'Manguni one',power:35.8,type:'Air'},
+  {name:'RailCawg',power:32,type:'Tank'},{name:'Burnt Cod',power:31,type:''},{name:'Ducking around',power:33,type:''},
+  {name:'Finnagoat',power:46.1,type:''},{name:'Manguni one',power:35.8,type:'Air'},
+];
+
+// Seed static kill team to Firestore on first load (only if empty)
+setTimeout(async()=>{
+  const { getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+  const snap = await getDocs(collection(db,'killteam'));
+  if(snap.empty){
+    for(const p of staticKillTeam){
+      await addDoc(collection(db,'killteam'),{name:p.name,power:p.power,type:p.type,addedAt:new Date().toISOString()});
+    }
+  }
+},1000);
+
+// ===== NAV =====
+window.showSection = function(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='r4roles'){renderR4Roles();renderRoles();}
+  if(id==='ds') renderDS();
+  if(id==='train') renderTrain();
+  if(id==='comms') renderComms();
+  if(id==='notes') renderNotesSection();
+  if(id==='events') renderEvents();
+};
+
+// ===== MEMBERS =====
+window.setSortBy = function(col){
+  if(sortCol===col) sortDir=sortDir==='asc'?'desc':'asc';
+  else{sortCol=col;sortDir='desc';}
+  document.getElementById('sort-col').value=col;
+  document.getElementById('sort-dir').value=sortDir;
+  renderMembers();
+};
+
+function renderMembers(){
+  const search=document.getElementById('member-search').value.toLowerCase();
+  const col=document.getElementById('sort-col').value||sortCol;
+  const dir=document.getElementById('sort-dir').value||sortDir;
+  const fst=document.getElementById('filter-status').value;
+  let fil=members.filter(m=>{
+    if(!(m.name||'').toLowerCase().includes(search)) return false;
+    if(fst==='keep') return m.status==='keep';
+    if(fst==='kick') return m.status==='kick';
+    return true;
+  });
+  const sortMap={name:'name',hqlevel:'hqlevel',kills:'kills',prof:'prof',heropower:'heropower',role:'role'};
+  fil.sort((a,b)=>{
+    let va=Number(a[sortMap[col]])||0, vb=Number(b[sortMap[col]])||0;
+    if(col==='name'||col==='role'){va=(a[sortMap[col]]||'').toLowerCase();vb=(b[sortMap[col]]||'').toLowerCase();}
+    return va<vb?(dir==='asc'?-1:1):va>vb?(dir==='asc'?1:-1):0;
+  });
+  const tbody=document.getElementById('members-tbody');
+  tbody.innerHTML=fil.length===0?'<tr><td colspan="10" class="empty-state">NO MEMBERS FOUND</td></tr>'
+    :fil.map(m=>{
+      const st=m.status||'keep';
+      const stBadge=st==='kick'?'<span class="badge badge-kick">KICK</span>':st==='watch'?'<span class="badge" style="background:rgba(232,160,32,.1);color:var(--accent);border:1px solid var(--accent-dim)">WATCH</span>':'<span class="badge badge-note">KEEP</span>';
+      const roleBadge=m.role?`<span class="badge badge-r4">${m.role}</span>`:'<span class="badge badge-r2">R3</span>';
+      const typeBadge=m.squadtype?`<span class="badge badge-${(m.squadtype||'').toLowerCase()}">${m.squadtype}</span>`:'-';
+      const seat=m.seatcolor?`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${m.seatcolor.toLowerCase()};margin-right:4px;vertical-align:middle;border:1px solid rgba(255,255,255,.2)"></span>${m.seatcolor}`:'—';
+      return `<tr>
+        <td><span class="avatar">${(m.name||'?').slice(0,2).toUpperCase()}</span><span class="bold">${m.name}</span></td>
+        <td><span class="mono">${m.hqlevel||'—'}</span></td>
+        <td>${roleBadge}</td>
+        <td><span class="mono high">${m.kills||'—'}</span></td>
+        <td><span class="mono">${m.prof||'—'}</span></td>
+        <td><span class="mono mid">${m.heropower?m.heropower+'MM':'—'}</span></td>
+        <td>${stBadge}</td>
+        <td>${typeBadge}</td>
+        <td><span style="font-size:11px;color:var(--text-dim);max-width:200px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.notes||''}">${m.notes||'—'}</span></td>
+        <td><button class="btn btn-sm" onclick="openEditModal('${m._id}')">EDIT</button></td>
+      </tr>`;
+    }).join('');
+  document.getElementById('sc-total').textContent=members.length;
+  document.getElementById('sc-keep').textContent=members.filter(m=>m.status==='keep').length;
+  document.getElementById('sc-kick').textContent=members.filter(m=>m.status==='kick').length;
+  document.getElementById('sc-r4').textContent=members.filter(m=>m.role&&m.role.toUpperCase().includes('R4')).length;
+  const profs=members.filter(m=>m.prof>0).map(m=>m.prof);
+  document.getElementById('sc-prof').textContent=profs.length?Math.round(profs.reduce((a,b)=>a+b,0)/profs.length):'—';
+  document.getElementById('member-count').textContent=`${fil.length} of ${members.length}`;
+}
+
+window.openAddMemberModal=function(){
+  ['m-name','m-kills','m-role','m-notes'].forEach(id=>document.getElementById(id).value='');
+  ['m-hq','m-prof','m-heropower'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-squadtype').value='';
+  document.getElementById('m-status').value='keep';
+  document.getElementById('m-seat').value='';
+  openModal('modal-member');
+};
+
+window.saveMember=async function(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){alert('Player name required.');return;}
+  await addDoc(collection(db,'members'),{
+    name,hqlevel:Number(document.getElementById('m-hq').value)||0,
+    kills:document.getElementById('m-kills').value.trim(),
+    role:document.getElementById('m-role').value.trim(),
+    prof:Number(document.getElementById('m-prof').value)||0,
+    heropower:Number(document.getElementById('m-heropower').value)||0,
+    squadtype:document.getElementById('m-squadtype').value,
+    status:document.getElementById('m-status').value,
+    seatcolor:document.getElementById('m-seat').value,
+    notes:document.getElementById('m-notes').value.trim(),
+    addedAt:new Date().toISOString()
+  });
+  closeModal('modal-member');
+};
+
+window.openEditModal=function(id){
+  const m=members.find(x=>x._id===id);if(!m)return;
+  document.getElementById('edit-doc-id').value=id;
+  document.getElementById('e-name').value=m.name||'';
+  document.getElementById('e-hq').value=m.hqlevel||'';
+  document.getElementById('e-kills').value=m.kills||'';
+  document.getElementById('e-role').value=m.role||'';
+  document.getElementById('e-prof').value=m.prof||'';
+  document.getElementById('e-heropower').value=m.heropower||'';
+  document.getElementById('e-squadtype').value=m.squadtype||'';
+  document.getElementById('e-status').value=m.status||'keep';
+  document.getElementById('e-seat').value=m.seatcolor||'';
+  document.getElementById('e-notes').value=m.notes||'';
+  openModal('modal-edit');
+};
+
+window.updateMember=async function(){
+  const id=document.getElementById('edit-doc-id').value;
+  await updateDoc(doc(db,'members',id),{
+    name:document.getElementById('e-name').value.trim(),
+    hqlevel:Number(document.getElementById('e-hq').value)||0,
+    kills:document.getElementById('e-kills').value.trim(),
+    role:document.getElementById('e-role').value.trim(),
+    prof:Number(document.getElementById('e-prof').value)||0,
+    heropower:Number(document.getElementById('e-heropower').value)||0,
+    squadtype:document.getElementById('e-squadtype').value,
+    status:document.getElementById('e-status').value,
+    seatcolor:document.getElementById('e-seat').value,
+    notes:document.getElementById('e-notes').value.trim(),
+    updatedAt:new Date().toISOString()
+  });
+  closeModal('modal-edit');
+};
+
+window.deleteMember=async function(){
+  const id=document.getElementById('edit-doc-id').value;
+  const m=members.find(x=>x._id===id);
+  if(!confirm('Remove '+m?.name+' from roster?'))return;
+  await deleteDoc(doc(db,'members',id));
+  closeModal('modal-edit');
+};
+
+// ===== KILL TEAM =====
+function renderKillTeam(){
+  const all=[...killTeam].sort((a,b)=>b.power-a.power);
+  document.getElementById('kill-grid').innerHTML=all.length===0
+    ?'<div class="empty-state" style="grid-column:1/-1">NO KILL TEAM DATA</div>'
+    :all.map((p,i)=>{
+      const t=(p.type||'').toLowerCase();
+      const barClass=t==='tank'?'tank':t==='air'?'air':'mix';
+      return `<div class="kill-card">
+        <div class="kill-type-bar ${barClass||'mix'}"></div>
+        <div class="kill-rank">#${i+1}</div>
+        <div class="kill-name">${p.name}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div class="kill-power">${p.power}MM</div>
+          ${p.type?`<span class="badge badge-${barClass}">${p.type}</span>`:''}
+        </div>
+        <button class="btn btn-sm btn-danger" style="margin-top:8px;font-size:9px" onclick="deleteKill('${p._id}')">REMOVE</button>
+      </div>`;
+    }).join('');
+}
+
+window.openAddKillModal=function(){
+  document.getElementById('k-name').value='';
+  document.getElementById('k-power').value='';
+  document.getElementById('k-type').value='Tank';
+  openModal('modal-kill');
+};
+
+window.saveKillPlayer=async function(){
+  const name=document.getElementById('k-name').value.trim();
+  if(!name){alert('Player name required.');return;}
+  await addDoc(collection(db,'killteam'),{name,power:Number(document.getElementById('k-power').value)||0,type:document.getElementById('k-type').value,addedAt:new Date().toISOString()});
+  closeModal('modal-kill');
+};
+
+window.deleteKill=async function(id){
+  if(!confirm('Remove from kill team?'))return;
+  await deleteDoc(doc(db,'killteam',id));
+};
+
+// ===== EVENTS =====
+const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const TLAB={battle:'Battle',alliance:'Alliance',research:'Research',build:'Build',gather:'Gather',train:'Train',zombie:'Zombie/MG'};
+
+function renderEvents(){
+  // Weekly planner
+  document.getElementById('weekly-planner-grid').innerHTML=weeklyPlanner.map(w=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid rgba(30,51,72,.3)">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);min-width:30px">${w.day}</span>
+      <span style="font-size:12px;color:var(--text);line-height:1.5">${w.events.replace(/\n/g,'<br>')}</span>
+    </div>`).join('');
+
+  // VS Focus
+  document.getElementById('vs-focus').innerHTML=vsFocus.map(v=>`
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent);min-width:30px;flex-shrink:0">${v.day}</span>
+      <span style="font-size:11px;color:var(--text-dim);line-height:1.5">${v.focus}</span>
+    </div>`).join('');
+
+  const today=new Date().getDay();
+  document.getElementById('week-grid').innerHTML=DAYS.map((d,i)=>{
+    const de=events.filter(e=>e.day==i);
+    return `<div class="day-col">
+      <div class="day-header ${i===today?'today':''}">${d}${i===today?' ◆':''}</div>
+      <div class="day-events">${de.map(e=>`<div class="event-chip ${e.type||'alliance'}">${(e.name||'').length>14?(e.name||'').slice(0,12)+'…':(e.name||'')}</div>`).join('')
+        ||'<div style="color:var(--text-dim);font-size:9px;padding:3px;font-family:monospace">—</div>'}</div>
+    </div>`;
+  }).join('');
+  const sorted=[...events].sort((a,b)=>a.day-b.day);
+  document.getElementById('event-list').innerHTML=sorted.length===0?'<div class="empty-state">NO EVENTS SCHEDULED</div>'
+    :sorted.map(e=>`
+      <div class="event-row ${e.type||'alliance'}">
+        <span class="event-day-badge">${DAYS[e.day]}</span>
+        <div class="event-info">
+          <div class="event-name">${e.name}</div>
+          <div class="event-desc">${e.notes||''}</div>
+          ${e.time?`<div class="event-time">&#128336; ${e.time}</div>`:''}
+        </div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">${TLAB[e.type]||e.type||''}</span>
+        <button class="btn btn-sm btn-danger" onclick="deleteEvent('${e._id}')">&#10005;</button>
+      </div>`).join('');
+}
+
+window.openAddEventModal=function(){openModal('modal-event');};
+
+window.saveEvent=async function(){
+  const name=document.getElementById('ev-name').value.trim();
+  if(!name){alert('Event name required.');return;}
+  await addDoc(collection(db,'events'),{name,type:document.getElementById('ev-type').value,day:Number(document.getElementById('ev-day').value),time:document.getElementById('ev-time').value.trim(),notes:document.getElementById('ev-notes').value.trim(),addedAt:new Date().toISOString()});
+  document.getElementById('ev-name').value='';document.getElementById('ev-notes').value='';document.getElementById('ev-time').value='';
+  closeModal('modal-event');
+};
+
+window.deleteEvent=async function(id){if(!confirm('Remove event?'))return;await deleteDoc(doc(db,'events',id));};
+
+// ===== TRAIN =====
+function renderTrain(){
+  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  let html='<div class="train-cell header">WEEK</div>';
+  days.forEach(d=>html+=`<div class="train-cell header">${d}</div>`);
+  trainData.forEach(row=>{
+    const cVals=[row.sun,row.mon,row.tue,row.wed,row.thu,row.fri,row.sat];
+    const vVals=[row.vipSun,row.vipMon,row.vipTue,row.vipWed,row.vipThu,row.vipFri,row.vipSat];
+    const hasVip=vVals.some(v=>v);
+    html+=`<div class="train-cell week-label"><span>${row.week}</span><span style="font-size:9px;color:var(--text-dim)">CONDUCTOR</span></div>`;
+    cVals.forEach(v=>html+=`<div class="train-cell conductor">${v?`<span class="train-conductor-name">${v}</span>`:`<span class="train-empty">—</span>`}</div>`);
+    if(hasVip){
+      html+=`<div class="train-cell week-label"><span>${row.week}</span><span style="font-size:9px;color:var(--accent)">VIP</span></div>`;
+      vVals.forEach(v=>html+=`<div class="train-cell vip">${v?`<span class="train-vip-name">${v}</span>`:`<span class="train-empty">—</span>`}</div>`);
+    }
+  });
+  document.getElementById('train-grid').innerHTML=html;
+}
+
+// ===== DS/CS =====
+function renderDS(){
+  const renderTeam=(el,data)=>{
+    let s1=[],s2=[],s3=[];
+    data.forEach(r=>r.stage==='Stage 1'?s1.push(r):(r.stage==='Stage 2'?s2.push(r):s3.push(r)));
+    const renderStage=(title,rows)=>`
+      <div class="ds-stage">${title}</div>
+      ${rows.map(r=>`<div class="ds-row">
+        <div class="ds-structure">${r.role}</div>
+        <div class="ds-lead">${r.lead}</div>
+        <div class="ds-player">${r.player}</div>
+        <div class="ds-player dim">${r.sub||''}</div>
+      </div>`).join('')}`;
+    el.innerHTML=renderStage('STAGE 1',s1)+renderStage('STAGE 2',s2);
+  };
+  renderTeam(document.getElementById('ds-team-a'),dsTeamA);
+  renderTeam(document.getElementById('ds-team-b'),dsTeamB);
+  const renderEnroll=(el,list)=>{
+    el.innerHTML=`<div class="ds-row" style="background:var(--bg3)">
+      <div class="ds-structure" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">SLOT</div>
+      <div class="ds-lead" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">PLAYER</div>
+      <div class="ds-player"></div><div></div></div>`
+    +list.map((p,i)=>`<div class="ds-row">
+      <div class="ds-structure mono dim">${i+1}</div>
+      <div class="ds-lead">${p}</div>
+      <div></div><div></div>
+    </div>`).join('');
+  };
+  renderEnroll(document.getElementById('cs-team-a'),csEnrollA);
+  renderEnroll(document.getElementById('cs-team-b'),csEnrollB);
+}
+
+// ===== R4 ROLES =====
+function renderR4Roles(){
+  document.getElementById('r4-role-list').innerHTML=r4Roles.map((r,i)=>`
+    <div class="r4-card" id="r4c-${i}" onclick="toggleR4('r4c-${i}')">
+      <div class="role-header">
+        <span style="font-size:18px">${r.emoji}</span>
+        <span class="r4-role-name">${r.title}</span>
+        <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim)">▼ EXPAND</span>
+      </div>
+      <div class="r4-desc">${r.desc}</div>
+      <div class="r4-todos">${r.todos}</div>
+    </div>`).join('');
+}
+
+window.toggleR4=function(id){document.getElementById(id).classList.toggle('expanded');};
+
+function renderRoles(){
+  const ro=['R5','R4','R3','R2','R1'];
+  document.getElementById('role-assignments').innerHTML=members.length===0
+    ?'<div class="empty-state">NO MEMBERS — ADD VIA ROSTER TAB</div>'
+    :members.map(m=>`
+      <div class="assign-row">
+        <div class="assign-name"><span class="avatar">${(m.name||'?').slice(0,2).toUpperCase()}</span>${m.name}</div>
+        <div class="assign-current"><span class="badge badge-${(m.role||'r2').toLowerCase().replace(/\s/g,'')}">${m.role||'R3'}</span></div>
+        <div style="min-width:120px"><select class="role-select" id="role-sel-${m._id}">
+          ${ro.map(r=>`<option value="${r}" ${m.role===r?'selected':''}>${r}</option>`).join('')}
+        </select></div>
+      </div>`).join('');
+}
+
+window.saveRoles=async function(){
+  await Promise.all(members.map(m=>{
+    const sel=document.getElementById('role-sel-'+m._id);
+    return sel?updateDoc(doc(db,'members',m._id),{role:sel.value,updatedAt:new Date().toISOString()}):null;
+  }).filter(Boolean));
+  const btn=document.querySelector('[onclick="saveRoles()"]');
+  btn.textContent='&#10003; SAVED';btn.style.background='var(--green)';
+  setTimeout(()=>{btn.innerHTML='&#128190; SAVE ALL';btn.style.background='';},1500);
+};
+
+// ===== KNOWLEDGE =====
+const catIcons={Strategy:'⚔',Building:'🏗',Research:'🔬',Events:'📅',Recruitment:'📢',Rules:'📜','VS Guide':'⚡',All:'📚'};
+
+window.toggleAddArticle=function(){document.getElementById('add-article-form').classList.toggle('open');};
+
+window.saveArticle=async function(){
+  const title=document.getElementById('art-title').value.trim();
+  const content=document.getElementById('art-content').value.trim();
+  if(!title||!content){alert('Title and content required.');return;}
+  await addDoc(collection(db,'articles'),{title,category:document.getElementById('art-cat').value,author:document.getElementById('art-author').value.trim()||'Unknown',date:new Date().toISOString().slice(0,10),content,addedAt:new Date().toISOString()});
+  document.getElementById('art-title').value='';document.getElementById('art-content').value='';document.getElementById('art-author').value='';
+  document.getElementById('add-article-form').classList.remove('open');
+};
+
+function renderKnowledge(){
+  const cats=['All',...new Set(articles.map(a=>a.category))];
+  const cnt={};articles.forEach(a=>{cnt[a.category]=(cnt[a.category]||0)+1;});
+  document.getElementById('kb-categories').innerHTML=cats.map(c=>`
+    <div class="kb-cat ${c===currentKbCat?'active':''}" onclick="setKbCat('${c}')">
+      <span>${catIcons[c]||'📄'} ${c}</span>
+      <span class="cat-count">${c==='All'?articles.length:cnt[c]||0}</span>
+    </div>`).join('');
+  const fil=currentKbCat==='All'?articles:articles.filter(a=>a.category===currentKbCat);
+  document.getElementById('kb-articles').innerHTML=fil.length===0?'<div class="empty-state">NO ENTRIES</div>'
+    :fil.map((a,i)=>`
+      <div class="article-card" id="art-${i}" onclick="document.getElementById('art-${i}').classList.toggle('expanded')">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div class="article-title">${a.title}</div>
+            <div class="article-meta"><span>${a.date}</span><span>${a.author}</span></div>
+          </div>
+          <span class="article-tag">${catIcons[a.category]||''} ${a.category}</span>
+        </div>
+        <div class="article-preview">${(a.content||'').slice(0,100)}${(a.content||'').length>100?'...':''}</div>
+        <div class="article-body">${a.content||''}</div>
+      </div>`).join('');
+}
+window.setKbCat=function(cat){currentKbCat=cat;renderKnowledge();};
+
+// ===== COMMS =====
+function renderComms(){
+  document.getElementById('comms-list').innerHTML=commsTemplates.map((c,i)=>`
+    <div class="comm-card" id="comm-${i}" onclick="document.getElementById('comm-${i}').classList.toggle('expanded')">
+      <div class="comm-header">
+        <span class="comm-category">${c.category}</span>
+        <span class="comm-topic">${c.topic}</span>
+        <span class="comm-sender" style="margin-left:auto">By: ${c.sender}</span>
+        <span class="comm-when">| ${c.when}</span>
+      </div>
+      <div class="comm-preview">Click to expand full message...</div>
+      <div class="comm-body">${c.body}</div>
+    </div>`).join('');
+}
+
+// ===== NOTES =====
+function renderNotes(){
+  const allNotes=[
+    ...staticNotes.map((t,i)=>({_id:'static-'+i,text:t,isStatic:true})),
+    ...notes.map(n=>({_id:n._id,text:n.text,isStatic:false}))
+  ];
+  document.getElementById('notes-grid').innerHTML=allNotes.length===0?'<div class="empty-state" style="grid-column:1/-1">NO NOTES</div>'
+    :allNotes.map(n=>`
+      <div class="note-card">
+        <div class="note-text">${n.text}</div>
+        ${!n.isStatic?`<button class="btn btn-sm btn-danger" style="margin-top:8px" onclick="deleteNote('${n._id}')">REMOVE</button>`:''}
+      </div>`).join('');
+}
+
+function renderNotesSection(){ renderNotes(); }
+
+window.openAddNoteModal=function(){document.getElementById('note-text').value='';openModal('modal-note');};
+window.saveNote=async function(){
+  const text=document.getElementById('note-text').value.trim();
+  if(!text){alert('Note text required.');return;}
+  await addDoc(collection(db,'notes'),{text,addedAt:new Date().toISOString()});
+  closeModal('modal-note');
+};
+window.deleteNote=async function(id){if(!confirm('Delete note?'))return;await deleteDoc(doc(db,'notes',id));};
+
+// ===== MODALS =====
+window.openModal=function(id){document.getElementById(id).classList.add('open');};
+window.closeModal=function(id){document.getElementById(id).classList.remove('open');};
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// Init static renders
+renderR4Roles();renderDS();renderTrain();renderComms();renderNotesSection();
+</script>
+</body>
+</html>
